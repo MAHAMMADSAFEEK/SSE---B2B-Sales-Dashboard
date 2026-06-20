@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BDM Sales Dashboard</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  :root{
+    --blue-900:#0b2a52; --blue-700:#1554b8; --blue-600:#1e63d6; --blue-500:#2f7bf4;
+    --blue-300:#7db0fb; --blue-100:#dbe9ff; --blue-50:#eef4ff;
+    --ink:#1a2b45; --muted:#6b7c97; --line:#e3eaf5; --bg:#f5f8fe; --white:#ffffff;
+    --green:#1f9d6b; --amber:#e0a020; --red:#d6493b;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Segoe UI',system-ui,-apple-system,Roboto,sans-serif;background:var(--bg);color:var(--ink);line-height:1.45}
+  .wrap{max-width:1280px;margin:0 auto;padding:28px 22px 60px}
+  header.top{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:flex-end;gap:16px;
+    padding:26px 30px;border-radius:16px;color:#fff;
+    background:linear-gradient(120deg,var(--blue-900),var(--blue-600));box-shadow:0 10px 30px rgba(21,84,184,.25)}
+  header.top h1{font-size:26px;font-weight:700;letter-spacing:.2px}
+  header.top p{color:#cfe0ff;font-size:13.5px;margin-top:4px}
+  .badge{background:rgba(255,255,255,.16);padding:8px 14px;border-radius:999px;font-size:13px;font-weight:600;backdrop-filter:blur(4px)}
+
+  .kpis{display:grid;grid-template-columns:repeat(6,1fr);gap:14px;margin:22px 0}
+  .kpi{background:var(--white);border:1px solid var(--line);border-radius:13px;padding:16px 16px 14px;position:relative;overflow:hidden}
+  .kpi::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--blue-500)}
+  .kpi .label{font-size:11.5px;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);font-weight:600}
+  .kpi .val{font-size:28px;font-weight:700;color:var(--blue-900);margin-top:6px;line-height:1}
+  .kpi .sub{font-size:11.5px;color:var(--muted);margin-top:6px}
+  .kpi.win::before{background:var(--green)} .kpi.win .val{color:var(--green)}
+  .kpi.cap::before{background:var(--blue-700)}
+
+  .grid{display:grid;gap:16px}
+  .g-2{grid-template-columns:1.4fr 1fr}
+  .g-2b{grid-template-columns:1fr 1fr}
+  .card{background:var(--white);border:1px solid var(--line);border-radius:14px;padding:18px 20px}
+  .card h3{font-size:14px;font-weight:700;color:var(--blue-900);margin-bottom:2px}
+  .card .hint{font-size:12px;color:var(--muted);margin-bottom:14px}
+  .chart-box{position:relative;height:300px}
+  .chart-box.sm{height:260px}
+
+  table{width:100%;border-collapse:collapse;font-size:13px}
+  th,td{text-align:left;padding:9px 8px;border-bottom:1px solid var(--line)}
+  th{font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);font-weight:600}
+  td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
+  tbody tr:hover{background:var(--blue-50)}
+  .rank{display:inline-flex;width:22px;height:22px;border-radius:6px;background:var(--blue-50);color:var(--blue-700);
+    font-size:11px;font-weight:700;align-items:center;justify-content:center}
+  .bar{height:7px;border-radius:4px;background:var(--blue-100);position:relative;overflow:hidden;min-width:50px}
+  .bar>span{position:absolute;left:0;top:0;bottom:0;background:linear-gradient(90deg,var(--blue-500),var(--blue-700));border-radius:4px}
+  .pill{font-size:11px;font-weight:600;padding:3px 9px;border-radius:999px}
+  .pill.hi{background:#e7f6ee;color:var(--green)} .pill.mid{background:#fdf3df;color:#9a6a06} .pill.lo{background:#fdecea;color:var(--red)}
+
+  .funnel{display:flex;flex-direction:column;gap:9px;margin-top:4px}
+  .frow{display:flex;align-items:center;gap:12px}
+  .frow .fl{flex:0 0 200px;font-size:12.5px;color:var(--ink)}
+  .ftrack{flex:1;height:26px;background:var(--blue-50);border-radius:7px;overflow:hidden}
+  .ftrack>div{height:100%;display:flex;align-items:center;padding-left:10px;color:#fff;font-size:12px;font-weight:700;border-radius:7px}
+  .sectitle{font-size:13px;font-weight:700;color:var(--blue-900);text-transform:uppercase;letter-spacing:.6px;margin:30px 0 12px}
+  footer{margin-top:34px;font-size:11.5px;color:var(--muted);text-align:center}
+  @media(max-width:980px){.kpis{grid-template-columns:repeat(3,1fr)}.g-2,.g-2b{grid-template-columns:1fr}}
+  @media(max-width:560px){.kpis{grid-template-columns:repeat(2,1fr)}.frow .fl{flex-basis:120px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div>
+      <h1>BDM Sales Dashboard</h1>
+      <p>Society solar pipeline &middot; meetings, conversions & business-development performance</p>
+    </div>
+    <div class="badge">Data as of 20 Jun 2026</div>
+  </header>
+
+  <!-- KPI ROW -->
+  <div class="kpis" id="kpis"></div>
+
+  <!-- ROW 1: trend + status -->
+  <div class="grid g-2">
+    <div class="card">
+      <h3>Sales won over time</h3>
+      <div class="hint">Projects marked "Sale Done" by month</div>
+      <div class="chart-box"><canvas id="trend"></canvas></div>
+    </div>
+    <div class="card">
+      <h3>Project status mix</h3>
+      <div class="hint">Latest status, deduplicated per lead</div>
+      <div class="chart-box sm"><canvas id="status"></canvas></div>
+    </div>
+  </div>
+
+  <!-- FUNNEL -->
+  <div class="sectitle">Pipeline funnel</div>
+  <div class="card">
+    <div class="funnel" id="funnel"></div>
+  </div>
+
+  <!-- ROW 2: category + city -->
+  <div class="grid g-2b" style="margin-top:16px">
+    <div class="card">
+      <h3>Lead temperature</h3>
+      <div class="hint">Hot / Mod / Cold / Won / Lost classification</div>
+      <div class="chart-box sm"><canvas id="cat"></canvas></div>
+    </div>
+    <div class="card">
+      <h3>Meetings by city</h3>
+      <div class="hint">Top 10 markets by meeting volume</div>
+      <div class="chart-box sm"><canvas id="city"></canvas></div>
+    </div>
+  </div>
+
+  <!-- ROW 3: BDM table + pending reasons -->
+  <div class="grid g-2" style="margin-top:16px">
+    <div class="card">
+      <h3>BDM leaderboard</h3>
+      <div class="hint">Owned leads, sales won and win rate</div>
+      <table id="bdm">
+        <thead><tr><th>#</th><th>BDM</th><th class="num">Leads</th><th class="num">Won</th><th>Win rate</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+    <div class="card">
+      <h3>Open pipeline — pending reasons</h3>
+      <div class="hint">What active leads are waiting on</div>
+      <table id="label">
+        <thead><tr><th>Reason / stage</th><th class="num">Leads</th><th></th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </div>
+
+  <footer>Source: "BDM Dashboard backend" &middot; 4,034 meetings across 3,410 leads. Capacity totals exclude data-entry outliers (&gt;5,000&nbsp;KW).</footer>
+</div>
+
+<script>
+const D = {
+ total_leads:3410, total_meetings:4034, won:216, lost:68, win_rate:6.3,
+ cap_total:274176, won_cap:9545, fresh:3417, followup:617,
+ status:{"Meeting Confirmed":1072,"Meeting completed (But on follow-up)":1815,"Meeting cancelled":94,"Meeting completed (Sale Done)":216,"Meeting Re-scheduled":145,"Meeting completed (Not interested)":68},
+ category:{"HOT":112,"MOD":401,"COLD":480,"WON":173,"LOST":139,"INACTIVE":419,"Not conducted":121},
+ city:{"Pune":1266,"Western Suburbs":466,"Thane":386,"Navi Mumbai":311,"Bangalore":234,"Central Suburbs":137,"Delhi":106,"Mumbai":57,"Hyderabad":51,"Gurugram":46},
+ label:{"Action Pending - Client":291,"Quotation Sent":209,"Followup Meeting Pending":126,"Society internal issues":81,"Quotation Pending":79,"Other priorities":70,"Revised Design Pending":62,"Future Follow up":44},
+ bdm:[{name:"Ritika.L",leads:162,won:18,rate:11.1},{name:"Sourabh.K",leads:40,won:18,rate:45.0},{name:"Sse_Ayushi.M",leads:115,won:17,rate:14.8},{name:"Varun.S",leads:99,won:16,rate:16.2},{name:"Abu.S",leads:93,won:13,rate:14.0},{name:"Rishabh.P",leads:179,won:13,rate:7.3},{name:"Shubham.S",leads:113,won:12,rate:10.6},{name:"Tulika.K",leads:91,won:11,rate:12.1},{name:"Himanshi.A",leads:217,won:10,rate:4.6},{name:"Swapnil.I",leads:92,won:10,rate:10.9},{name:"Gaurav.K",leads:118,won:10,rate:8.5},{name:"Akshay.S",leads:132,won:9,rate:6.8},{name:"Sohan.M",leads:120,won:7,rate:5.8},{name:"Ganesh.P",leads:79,won:7,rate:8.9},{name:"Satish.C",leads:96,won:5,rate:5.2}],
+ won_month:{"2025-01":2,"2025-02":1,"2025-03":2,"2025-05":1,"2025-07":6,"2025-08":11,"2025-09":4,"2025-10":8,"2025-11":16,"2025-12":11,"2026-01":28,"2026-02":30,"2026-03":36,"2026-04":37,"2026-05":11,"2026-06":11}
+};
+
+const B={n900:'#0b2a52',n700:'#1554b8',n600:'#1e63d6',n500:'#2f7bf4',n300:'#7db0fb',n100:'#dbe9ff'};
+const fmt=n=>n.toLocaleString('en-IN');
+Chart.defaults.font.family="'Segoe UI',system-ui,sans-serif";
+Chart.defaults.color='#6b7c97';
+
+// KPIs
+const completed = D.status["Meeting completed (But on follow-up)"]+D.won+D.lost;
+const kpis=[
+ {label:'Total leads',val:fmt(D.total_leads),sub:'unique projects'},
+ {label:'Meetings held',val:fmt(D.total_meetings),sub:D.fresh+' fresh / '+D.followup+' follow-up'},
+ {label:'Sales won',val:fmt(D.won),cls:'win',sub:'projects closed'},
+ {label:'Win rate',val:D.win_rate+'%',cls:'win',sub:'won ÷ total leads'},
+ {label:'Won capacity',val:fmt(D.won_cap)+' KW',cls:'cap',sub:'installed on closed deals'},
+ {label:'Pipeline capacity',val:fmt(D.cap_total)+' KW',cls:'cap',sub:'all leads (cleaned)'},
+];
+document.getElementById('kpis').innerHTML=kpis.map(k=>`
+ <div class="kpi ${k.cls||''}"><div class="label">${k.label}</div>
+ <div class="val">${k.val}</div><div class="sub">${k.sub}</div></div>`).join('');
+
+// Trend
+const tl=Object.keys(D.won_month), tv=Object.values(D.won_month);
+new Chart(document.getElementById('trend'),{type:'line',
+ data:{labels:tl.map(m=>{const[y,mo]=m.split('-');return['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][+mo-1]+" '"+y.slice(2)}),
+  datasets:[{data:tv,borderColor:B.n600,backgroundColor:'rgba(30,99,214,.12)',fill:true,tension:.35,
+   pointBackgroundColor:B.n700,pointRadius:3,borderWidth:2.5}]},
+ options:{plugins:{legend:{display:false}},scales:{y:{beginAtZero:true,grid:{color:'#eef2f9'}},x:{grid:{display:false}}},
+  maintainAspectRatio:false}});
+
+// Status doughnut
+const sLab=Object.keys(D.status), sVal=Object.values(D.status);
+const sCol=[B.n300,B.n500,'#d6493b','#1f9d6b','#e0a020','#94a3b8'];
+new Chart(document.getElementById('status'),{type:'doughnut',
+ data:{labels:sLab,datasets:[{data:sVal,backgroundColor:sCol,borderWidth:2,borderColor:'#fff'}]},
+ options:{cutout:'58%',plugins:{legend:{position:'bottom',labels:{boxWidth:10,font:{size:10.5},padding:8}}},maintainAspectRatio:false}});
+
+// Funnel
+const f=[
+ {l:'Total leads',v:D.total_leads,c:B.n300},
+ {l:'Meetings held',v:D.total_meetings>D.total_leads?D.total_leads:D.total_meetings,c:B.n500},
+ {l:'Active / on follow-up',v:D.status["Meeting completed (But on follow-up)"]+D.status["Meeting Confirmed"],c:B.n600},
+ {l:'Quotation sent',v:D.label["Quotation Sent"],c:B.n700},
+ {l:'Sales won',v:D.won,c:'#1f9d6b'},
+];
+const fmax=Math.max(...f.map(x=>x.v));
+document.getElementById('funnel').innerHTML=f.map(x=>`
+ <div class="frow"><div class="fl">${x.l}</div>
+ <div class="ftrack"><div style="width:${Math.max(8,x.v/fmax*100)}%;background:${x.c}">${fmt(x.v)}</div></div></div>`).join('');
+
+// Category bar
+const cOrder=['HOT','MOD','COLD','WON','LOST','INACTIVE','Not conducted'];
+const cCol={HOT:'#d6493b',MOD:'#e0a020',COLD:B.n300,WON:'#1f9d6b',LOST:'#94a3b8',INACTIVE:'#b8c4d6','Not conducted':'#d7dee8'};
+new Chart(document.getElementById('cat'),{type:'bar',
+ data:{labels:cOrder,datasets:[{data:cOrder.map(k=>D.category[k]||0),backgroundColor:cOrder.map(k=>cCol[k]),borderRadius:5}]},
+ options:{plugins:{legend:{display:false}},scales:{y:{beginAtZero:true,grid:{color:'#eef2f9'}},x:{grid:{display:false}}},maintainAspectRatio:false}});
+
+// City bar (horizontal)
+const ciL=Object.keys(D.city), ciV=Object.values(D.city);
+new Chart(document.getElementById('city'),{type:'bar',
+ data:{labels:ciL,datasets:[{data:ciV,backgroundColor:B.n500,borderRadius:5}]},
+ options:{indexAxis:'y',plugins:{legend:{display:false}},scales:{x:{beginAtZero:true,grid:{color:'#eef2f9'}},y:{grid:{display:false}}},maintainAspectRatio:false}});
+
+// BDM table
+const maxWon=Math.max(...D.bdm.map(b=>b.won));
+document.querySelector('#bdm tbody').innerHTML=D.bdm.map((b,i)=>{
+ const cls=b.rate>=14?'hi':b.rate>=8?'mid':'lo';
+ return `<tr><td><span class="rank">${i+1}</span></td><td>${b.name}</td>
+ <td class="num">${b.leads}</td><td class="num"><b>${b.won}</b></td>
+ <td><span class="pill ${cls}">${b.rate}%</span></td></tr>`}).join('');
+
+// Pending reasons
+const lL=Object.keys(D.label), lmax=Math.max(...Object.values(D.label));
+document.querySelector('#label tbody').innerHTML=lL.map(k=>`
+ <tr><td>${k}</td><td class="num">${D.label[k]}</td>
+ <td style="width:120px"><div class="bar"><span style="width:${D.label[k]/lmax*100}%"></span></div></td></tr>`).join('');
+</script>
+</body>
+</html>
