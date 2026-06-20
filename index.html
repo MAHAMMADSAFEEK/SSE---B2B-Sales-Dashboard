@@ -74,31 +74,33 @@
   .tab{background:#dfe8f7;color:var(--b700);border:none;padding:10px 20px;border-radius:11px 11px 0 0;font-size:13.5px;font-weight:700;cursor:pointer}
   .tab.active{background:var(--white);color:var(--b900);box-shadow:0 -2px 0 var(--b600) inset}
   .subtabs{display:flex;gap:6px;margin-top:14px;margin-bottom:-2px}
-  .subtab,.tsub{background:#e6eefb;color:var(--b700);border:1px solid var(--line);padding:7px 16px;border-radius:9px;font-size:12.5px;font-weight:600;cursor:pointer}
-  .subtab.active,.tsub.active{background:var(--b600);color:#fff;border-color:var(--b600)}
+  .subtab,.tsub,.csub,.jsub{background:#e6eefb;color:var(--b700);border:1px solid var(--line);padding:7px 16px;border-radius:9px;font-size:12.5px;font-weight:600;cursor:pointer}
+  .subtab.active,.tsub.active,.csub.active,.jsub.active{background:var(--b600);color:#fff;border-color:var(--b600)}
   thead th.grp{text-align:center;border-bottom:1px solid rgba(255,255,255,.25)}
   thead th.sub{font-size:9.5px;background:var(--b800)}
   /* Meeting report table — centered + colored boxes */
-  #mtg_tbl th,#mtg_tbl td{text-align:center;vertical-align:middle}
-  #mtg_tbl thead th[rowspan]{vertical-align:middle}
-  #mtg_tbl td.keycell{text-align:left;font-weight:700;color:var(--b900);white-space:nowrap}
-  #mtg_tbl tbody tr:hover{background:#f6f9fe}
-  #mtg_tbl .box{display:inline-block;min-width:40px;padding:5px 10px;border-radius:8px;font-weight:700;font-variant-numeric:tabular-nums;font-size:12.5px}
-  #mtg_tbl .box-green{background:#e3f5ea;color:#15784e}
-  #mtg_tbl .box-sched{background:#e9eefb;color:#101a4d}
-  #mtg_tbl .box-blue{background:#e2ecfc;color:#1554b8}
-  #mtg_tbl .box-red{background:#fde7e4;color:#c0341e}
-  #mtg_tbl .box-grey{background:#eef1f6;color:#64748b}
-  #mtg_tbl .z{color:#c5cedd;font-size:12.5px}
-  #mtg_tbl .schsub{display:flex;gap:5px;justify-content:center;margin-top:5px}
-  #mtg_tbl .fch{font-size:10px;font-weight:700;padding:2px 7px;border-radius:6px;white-space:nowrap}
-  #mtg_tbl .fch.fresh{background:#e4eefc;color:#1554b8}
-  #mtg_tbl .fch.fup{background:#f3eafe;color:#6d49d6}
-  #mtg_tbl tr.totrow .fch{background:rgba(255,255,255,.18);color:#fff}
-  #mtg_tbl tr.totrow{background:#0f1a4d}
-  #mtg_tbl tr.totrow td{color:#fff;font-weight:800;border-bottom:none}
-  #mtg_tbl tr.totrow td.keycell{color:#fff}
-  #mtg_tbl tr.totrow .box{background:rgba(255,255,255,.16);color:#fff}
+  .rpt-tbl th,.rpt-tbl td{text-align:center;vertical-align:middle}
+  .rpt-tbl thead th[rowspan]{vertical-align:middle}
+  .rpt-tbl td.keycell{text-align:left;font-weight:700;color:var(--b900);white-space:nowrap}
+  .rpt-tbl tbody tr:hover{background:#f6f9fe}
+  .rpt-tbl .box{display:inline-block;min-width:40px;padding:5px 10px;border-radius:8px;font-weight:700;font-variant-numeric:tabular-nums;font-size:12.5px}
+  .rpt-tbl .box-green{background:#e3f5ea;color:#15784e}
+  .rpt-tbl .box-sched{background:#e9eefb;color:#101a4d}
+  .rpt-tbl .box-blue{background:#e2ecfc;color:#1554b8}
+  .rpt-tbl .box-red{background:#fde7e4;color:#c0341e}
+  .rpt-tbl .box-grey{background:#eef1f6;color:#64748b}
+  .rpt-tbl .z{color:#c5cedd;font-size:12.5px}
+  .rpt-tbl .pct{font-weight:800;font-variant-numeric:tabular-nums}
+  .rpt-tbl .pct.hi{color:#15784e}.rpt-tbl .pct.mid{color:#9a6a06}.rpt-tbl .pct.lo{color:#c0341e}
+  .rpt-tbl .schsub{display:flex;gap:5px;justify-content:center;margin-top:5px}
+  .rpt-tbl .fch{font-size:10px;font-weight:700;padding:2px 7px;border-radius:6px;white-space:nowrap}
+  .rpt-tbl .fch.fresh{background:#e4eefc;color:#1554b8}
+  .rpt-tbl .fch.fup{background:#f3eafe;color:#6d49d6}
+  .rpt-tbl tr.totrow .fch{background:rgba(255,255,255,.18);color:#fff}
+  .rpt-tbl tr.totrow{background:#0f1a4d}
+  .rpt-tbl tr.totrow td{color:#fff;font-weight:800;border-bottom:none}
+  .rpt-tbl tr.totrow td.keycell{color:#fff}
+  .rpt-tbl tr.totrow .box{background:rgba(255,255,255,.16);color:#fff}
 
   .kpis{display:grid;grid-template-columns:repeat(6,1fr);gap:13px;margin-top:14px}
   .kpi{background:var(--white);border:1px solid var(--line);border-radius:14px;padding:15px 16px 13px;position:relative;overflow:hidden}
@@ -191,6 +193,8 @@
     <button class="tab" data-tab="report">Project Report</button>
     <button class="tab" data-tab="meeting">Meeting Report</button>
     <button class="tab" data-tab="tasks">Task List</button>
+    <button class="tab" data-tab="cohort">Cohort Funnel</button>
+    <button class="tab" data-tab="journey">Lead Journey</button>
   </div>
 
   <!-- OVERVIEW TAB -->
@@ -244,7 +248,7 @@
     <div class="card">
       <h3 id="mtg_title">Meeting report — city-wise</h3>
       <div class="hint" id="mtg_hint"></div>
-      <div class="ptable-wrap"><table id="mtg_tbl">
+      <div class="ptable-wrap"><table id="mtg_tbl" class="rpt-tbl">
         <thead>
           <tr>
             <th id="mtg_keyhead" rowspan="2">City</th>
@@ -273,6 +277,38 @@
       <div class="hint" id="task_hint"></div>
       <div class="ptable-wrap"><table id="task_tbl"><thead><tr>
         <th>Date</th><th>Type</th><th>Project</th><th>City</th><th>BDM</th><th>Status</th><th>Latest call status</th>
+      </tr></thead><tbody></tbody></table></div>
+    </div>
+  </div>
+
+  <!-- COHORT FUNNEL TAB -->
+  <div id="tab-cohort" style="display:none">
+    <div class="subtabs">
+      <button class="csub active" data-c="month">By Month</button>
+      <button class="csub" data-c="bdm">By BDM</button>
+      <button class="csub" data-c="city">By City</button>
+    </div>
+    <div class="card">
+      <h3 id="coh_title">Cohort funnel — by month</h3>
+      <div class="hint">Counts events by the period they happened in — completions & wins may belong to leads scheduled earlier</div>
+      <div class="ptable-wrap"><table id="cohort_tbl" class="rpt-tbl"><thead><tr>
+        <th id="coh_keyhead">Month</th><th>Meetings scheduled</th><th>Meetings completed</th><th>Completed %</th><th>Sale won</th><th>Won % (of scheduled)</th><th>Won % (of completed)</th>
+      </tr></thead><tbody></tbody></table></div>
+    </div>
+  </div>
+
+  <!-- LEAD JOURNEY TAB -->
+  <div id="tab-journey" style="display:none">
+    <div class="subtabs">
+      <button class="jsub active" data-j="month">By Scheduled Month</button>
+      <button class="jsub" data-j="bdm">By BDM</button>
+      <button class="jsub" data-j="city">By City</button>
+    </div>
+    <div class="card">
+      <h3 id="jor_title">Lead journey — by scheduled month</h3>
+      <div class="hint">Follows the same lead cohort: scheduled → eventually completed → eventually sale won</div>
+      <div class="ptable-wrap"><table id="journey_tbl" class="rpt-tbl"><thead><tr>
+        <th id="jor_keyhead">Cohort (first meeting month)</th><th>Leads</th><th>Completed</th><th>Completed %</th><th>Sale won</th><th>Won %</th>
       </tr></thead><tbody></tbody></table></div>
     </div>
   </div>
@@ -521,7 +557,66 @@ function render(){
   syncFilterUI();renderChip();
   renderMeeting(rows);
   renderTasks(rows);
+  renderCohort(rows);
+  renderJourney(rows);
 }
+
+// ---- COHORT FUNNEL (period activity: by month / bdm / city) ----
+let COHORTMODE='month';
+function pctCls(p){return p>=20?'hi':p>=8?'mid':'lo';}
+function pctCell(n,d){const p=d?100*n/d:0;return `<td><span class="pct ${pctCls(p)}">${p.toFixed(1)}%</span></td>`;}
+function renderCohort(rows){
+  const agg={};const A=k=>agg[k]||(agg[k]={s:0,c:0,w:0});
+  if(COHORTMODE==='month'){
+    rows.forEach(r=>{if(r.msM)A(r.msM).s++;if(r.cmpM)A(r.cmpM).c++;if(r.wonM)A(r.wonM).w++;});
+  }else{
+    const kf=COHORTMODE==='bdm'?(r=>r.bdm||'(no BDM)'):(r=>r.city||'(no city)');
+    rows.forEach(r=>{const a=A(kf(r));a.s++;if(r.cmpM)a.c++;if(r.wonM)a.w++;});
+  }
+  let keys=Object.keys(agg);
+  if(COHORTMODE==='month')keys.sort();else keys.sort((a,b)=>agg[b].s-agg[a].s);
+  document.getElementById('coh_keyhead').textContent={month:'Month',bdm:'BDM',city:'City'}[COHORTMODE];
+  document.getElementById('coh_title').textContent='Cohort funnel — by '+COHORTMODE;
+  const disp=COHORTMODE==='month'?(k=>/^\d{4}-\d{2}$/.test(k)?monDisp(k):k):(x=>x);
+  const box=(n,c)=>n?`<span class="box box-${c}">${n}</span>`:'<span class="z">0</span>';
+  const tb=document.querySelector('#cohort_tbl tbody');
+  if(!keys.length){tb.innerHTML='<tr><td colspan=7 class=empty>No data</td></tr>';return;}
+  tb.innerHTML=keys.map(k=>{const a=agg[k];
+    return `<tr><td class="keycell">${disp(k)}</td><td>${box(a.s,'sched')}</td><td>${box(a.c,'green')}</td>${pctCell(a.c,a.s)}<td>${box(a.w,'blue')}</td>${pctCell(a.w,a.s)}${pctCell(a.w,a.c)}</tr>`;
+  }).join('');
+  const T={s:0,c:0,w:0};keys.forEach(k=>{T.s+=agg[k].s;T.c+=agg[k].c;T.w+=agg[k].w;});
+  tb.innerHTML+=`<tr class="totrow"><td class="keycell">TOTAL</td><td>${box(T.s,'sched')}</td><td>${box(T.c,'green')}</td>${pctCell(T.c,T.s)}<td>${box(T.w,'blue')}</td>${pctCell(T.w,T.s)}${pctCell(T.w,T.c)}</tr>`;
+}
+document.querySelectorAll('.csub').forEach(b=>b.onclick=()=>{document.querySelectorAll('.csub').forEach(x=>x.classList.remove('active'));b.classList.add('active');COHORTMODE=b.dataset.c;renderCohort(applyFilters());});
+
+// ---- LEAD JOURNEY (lead cohort followed to outcome) ----
+let JOURNEYMODE='month';
+function renderJourney(rows){
+  const leads=byLead(rows);const agg={};const A=k=>agg[k]||(agg[k]={n:0,c:0,w:0});
+  Object.keys(leads).forEach(id=>{
+    const rs=leads[id],r=rep(rs);let k;
+    if(JOURNEYMODE==='bdm')k=r.bdm||'(no BDM)';
+    else if(JOURNEYMODE==='city')k=r.city||'(no city)';
+    else{const ms=rs.map(x=>x.msM).filter(Boolean).sort();k=ms[0]||'(no date)';}
+    const a=A(k);a.n++;
+    if(rs.some(x=>/completed/i.test(x.pstat))||/completed/i.test(r.pstat))a.c++;
+    if(/Sale Done/.test(r.pstat))a.w++;
+  });
+  let keys=Object.keys(agg);
+  if(JOURNEYMODE==='month')keys.sort();else keys.sort((a,b)=>agg[b].n-agg[a].n);
+  document.getElementById('jor_keyhead').textContent={month:'Cohort (first meeting month)',bdm:'BDM',city:'City'}[JOURNEYMODE];
+  document.getElementById('jor_title').textContent='Lead journey — by '+(JOURNEYMODE==='month'?'scheduled month':JOURNEYMODE);
+  const disp=JOURNEYMODE==='month'?(k=>/^\d{4}-\d{2}$/.test(k)?monDisp(k):k):(x=>x);
+  const box=(n,c)=>n?`<span class="box box-${c}">${n}</span>`:'<span class="z">0</span>';
+  const tb=document.querySelector('#journey_tbl tbody');
+  if(!keys.length){tb.innerHTML='<tr><td colspan=6 class=empty>No data</td></tr>';return;}
+  tb.innerHTML=keys.map(k=>{const a=agg[k];
+    return `<tr><td class="keycell">${disp(k)}</td><td>${box(a.n,'sched')}</td><td>${box(a.c,'green')}</td>${pctCell(a.c,a.n)}<td>${box(a.w,'blue')}</td>${pctCell(a.w,a.n)}</tr>`;
+  }).join('');
+  const T={n:0,c:0,w:0};keys.forEach(k=>{T.n+=agg[k].n;T.c+=agg[k].c;T.w+=agg[k].w;});
+  tb.innerHTML+=`<tr class="totrow"><td class="keycell">TOTAL</td><td>${box(T.n,'sched')}</td><td>${box(T.c,'green')}</td>${pctCell(T.c,T.n)}<td>${box(T.w,'blue')}</td>${pctCell(T.w,T.n)}</tr>`;
+}
+document.querySelectorAll('.jsub').forEach(b=>b.onclick=()=>{document.querySelectorAll('.jsub').forEach(x=>x.classList.remove('active'));b.classList.add('active');JOURNEYMODE=b.dataset.j;renderJourney(applyFilters());});
 
 // ---- TASK LIST (today / tomorrow / week / month) ----
 const TODAY_UTC=Date.UTC(2026,5,20); // 2026-06-20
@@ -613,6 +708,8 @@ document.querySelectorAll('.tab').forEach(t=>t.onclick=()=>{
   document.getElementById('tab-report').style.display=tab==='report'?'':'none';
   document.getElementById('tab-meeting').style.display=tab==='meeting'?'':'none';
   document.getElementById('tab-tasks').style.display=tab==='tasks'?'':'none';
+  document.getElementById('tab-cohort').style.display=tab==='cohort'?'':'none';
+  document.getElementById('tab-journey').style.display=tab==='journey'?'':'none';
   if(tab==='overview')Object.values(charts).forEach(c=>c&&c.resize());
 });
 
