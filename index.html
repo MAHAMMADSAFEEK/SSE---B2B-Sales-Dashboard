@@ -85,6 +85,7 @@
   #mtg_tbl tbody tr:hover{background:#f6f9fe}
   #mtg_tbl .box{display:inline-block;min-width:40px;padding:5px 10px;border-radius:8px;font-weight:700;font-variant-numeric:tabular-nums;font-size:12.5px}
   #mtg_tbl .box-green{background:#e3f5ea;color:#15784e}
+  #mtg_tbl .box-sched{background:#e9eefb;color:#101a4d}
   #mtg_tbl .box-blue{background:#e2ecfc;color:#1554b8}
   #mtg_tbl .box-red{background:#fde7e4;color:#c0341e}
   #mtg_tbl .box-grey{background:#eef1f6;color:#64748b}
@@ -118,6 +119,13 @@
   .card .hint{font-size:11.5px;color:var(--muted);margin:3px 0 12px 13px}
   .chart-box{position:relative;height:330px}
   .chart-box.sm{height:285px}
+  /* conversion funnel */
+  .funnel{display:flex;flex-direction:column;align-items:center;gap:10px;padding:16px 0 6px}
+  .fstage{min-height:78px;width:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#fff;
+    border-radius:10px;clip-path:polygon(0 0,100% 0,93% 100%,7% 100%);transition:width .35s ease}
+  .fstage .fs-n{font-size:26px;font-weight:800;line-height:1}
+  .fstage .fs-l{font-size:11.5px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;opacity:.95}
+  .fstage .fs-p{font-size:11px;opacity:.9;margin-top:3px}
 
   .ptable-wrap{overflow-x:auto}
   table{width:100%;border-collapse:collapse;font-size:13px}
@@ -191,6 +199,9 @@
     <div class="row r-wide"><div class="card">
       <h3>Sales won by month</h3><div class="hint">Click a month to filter · counts shown on bars</div>
       <div class="chart-box"><canvas id="trend"></canvas></div></div></div>
+    <div class="row r-wide"><div class="card">
+      <h3>Conversion funnel</h3><div class="hint">Total unique leads → meeting completed → sale done</div>
+      <div id="funnel" class="funnel"></div></div></div>
     <div class="row r-3">
       <div class="card"><h3>Project status mix</h3><div class="hint">Click a slice to filter</div><div class="chart-box sm"><canvas id="status"></canvas></div></div>
       <div class="card"><h3>Lead temperature</h3><div class="hint">Click a bar to filter</div><div class="chart-box sm"><canvas id="cat"></canvas></div></div>
@@ -388,6 +399,18 @@ function rep(rows){return rows.slice().sort((a,b)=>(a.eff||'').localeCompare(b.e
 let charts={};
 function destroy(){Object.values(charts).forEach(c=>c&&c.destroy());charts={};}
 
+function renderFunnel(total,completed,won){
+  const el=document.getElementById('funnel');if(!el)return;
+  const stages=[{l:'Total unique leads',n:total,c:'#2f7bf4'},{l:'Meeting completed',n:completed,c:'#1554b8'},{l:'Sale done',n:won,c:'#1f9d6b'}];
+  const max=total||1;
+  el.innerHTML=stages.map((s,i)=>{
+    const w=Math.max(30,Math.round(s.n/max*100));
+    const pct=total?(s.n/total*100).toFixed(1):'0.0';
+    const conv=i>0&&stages[i-1].n?` · ${(s.n/stages[i-1].n*100).toFixed(1)}% from prev`:'';
+    return `<div class="fstage" style="width:${w}%;background:${s.c}"><div class="fs-l">${s.l}</div><div class="fs-n">${fmt(s.n)}</div><div class="fs-p">${pct}% of leads${conv}</div></div>`;
+  }).join('');
+}
+
 function render(){
   const rows=applyFilters();
   const leads=byLead(rows);
@@ -406,6 +429,10 @@ function render(){
     ['Sales won',fmt(won),'projects closed','c-g','bg-g'],['Win rate',winRate.toFixed(1)+'%','won ÷ leads','c-v','bg-v'],
     ['Won capacity',fmt(wonCap)+' KW','on closed deals','c-a','bg-a'],['Pipeline capacity',fmt(pipeCap)+' KW','all leads','c-b','bg-b']];
   document.getElementById('kpis').innerHTML=K.map(k=>`<div class="kpi"><div class="top ${k[4]}"></div><div class="label">${k[0]}</div><div class="val ${k[3]}">${k[1]}</div><div class="sub">${k[2]}</div></div>`).join('');
+
+  // conversion funnel
+  const completed=projRecs.filter(p=>/completed/i.test(p.r.pstat)).length;
+  renderFunnel(nLeads,completed,won);
 
   destroy();
   const dlDark={color:'#1a2440',font:{weight:700,size:11},anchor:'end',align:'top'};
@@ -533,28 +560,32 @@ function classifyMtg(s){
 }
 function renderMeeting(rows){
   const keyf=MTGMODE==='city'?(r=>r.city||'(no city)'):MTGMODE==='bdm'?(r=>r.bdm||'(no BDM)'):(r=>r.msM||'(no date)');
+  const blank=()=>({sched:{n:0,f:0,u:0},fu:{n:0,f:0,u:0},won:{n:0,f:0,u:0},lost:{n:0,f:0,u:0},resch:{n:0,f:0,u:0},canc:{n:0,f:0,u:0},pending:{n:0,f:0,u:0}});
+  const bump=(o,r)=>{o.n++;if(r.ftype==='Fresh Meeting')o.f++;else if(r.ftype==='Follow-up Meeting')o.u++;};
   const agg={};
-  rows.forEach(r=>{const k=keyf(r);const a=agg[k]||(agg[k]={sched:0,fresh:0,fup:0,fu:0,won:0,lost:0,resch:0,canc:0,pending:0});a.sched++;if(r.ftype==='Fresh Meeting')a.fresh++;else if(r.ftype==='Follow-up Meeting')a.fup++;a[classifyMtg(r.fstat)]++;});
+  rows.forEach(r=>{const k=keyf(r);const a=agg[k]||(agg[k]=blank());bump(a.sched,r);bump(a[classifyMtg(r.fstat)],r);});
   let keys=Object.keys(agg);
-  if(MTGMODE==='month')keys.sort();else keys.sort((a,b)=>agg[b].sched-agg[a].sched);
+  if(MTGMODE==='month')keys.sort();else keys.sort((a,b)=>agg[b].sched.n-agg[a].sched.n);
   const unit={city:'City',bdm:'BDM',month:'Scheduled month'}[MTGMODE];
   const tword={city:'city-wise',bdm:'BDM-wise',month:'monthly'}[MTGMODE];
   document.getElementById('mtg_keyhead').textContent=unit;
   document.getElementById('mtg_title').textContent='Meeting report — '+tword;
   document.getElementById('mtg_hint').textContent=keys.length+' '+{city:'cities',bdm:'BDMs',month:'months'}[MTGMODE]+' · '+rows.length+' meetings scheduled';
   const disp=MTGMODE==='month'?(k=>/^\d{4}-\d{2}$/.test(k)?monDisp(k):k):(x=>x);
-  const box=(n,cls)=>n?`<span class="box box-${cls}">${n}</span>`:'<span class="z">0</span>';
-  const schCell=a=>`<b>${a.sched}</b><div class="schsub"><span class="fch fresh">Fresh ${a.fresh}</span><span class="fch fup">F/up ${a.fup}</span></div>`;
+  const sum=(...os)=>os.reduce((t,o)=>({n:t.n+o.n,f:t.f+o.f,u:t.u+o.u}),{n:0,f:0,u:0});
+  // metric cell: colored box + small Fresh / F-up split
+  const mc=(o,cls)=>o.n?`<td>${`<span class="box box-${cls}">${o.n}</span>`}<div class="schsub"><span class="fch fresh">Fresh ${o.f}</span><span class="fch fup">F/up ${o.u}</span></div></td>`:'<td><span class="z">0</span></td>';
   const tb=document.querySelector('#mtg_tbl tbody');
   if(!keys.length){tb.innerHTML='<tr><td colspan=8 class=empty>No meetings match the current filters</td></tr>';return;}
-  tb.innerHTML=keys.map(k=>{const a=agg[k],comp=a.fu+a.won+a.lost;
-    return `<tr><td class="keycell">${disp(k)}</td><td>${schCell(a)}</td>`+
-      `<td>${box(comp,'green')}</td><td>${box(a.fu,'green')}</td><td>${box(a.won,'blue')}</td><td>${box(a.lost,'grey')}</td>`+
-      `<td>${box(a.resch+a.canc,'grey')}</td><td>${box(a.pending,'red')}</td></tr>`;
+  tb.innerHTML=keys.map(k=>{const a=agg[k];const comp=sum(a.fu,a.won,a.lost),rc=sum(a.resch,a.canc);
+    return `<tr><td class="keycell">${disp(k)}</td>`+
+      mc(a.sched,'sched')+mc(comp,'green')+mc(a.fu,'green')+mc(a.won,'blue')+mc(a.lost,'grey')+mc(rc,'grey')+mc(a.pending,'red')+`</tr>`;
   }).join('');
-  const T={sched:0,fresh:0,fup:0,fu:0,won:0,lost:0,resch:0,canc:0,pending:0};
-  keys.forEach(k=>Object.keys(T).forEach(x=>T[x]+=agg[k][x]));
-  tb.innerHTML+=`<tr class="totrow"><td class="keycell">TOTAL</td><td>${schCell(T)}</td><td>${box(T.fu+T.won+T.lost,'green')}</td><td>${box(T.fu,'green')}</td><td>${box(T.won,'blue')}</td><td>${box(T.lost,'grey')}</td><td>${box(T.resch+T.canc,'grey')}</td><td>${box(T.pending,'red')}</td></tr>`;
+  const T=blank();
+  keys.forEach(k=>['sched','fu','won','lost','resch','canc','pending'].forEach(b=>{T[b].n+=agg[k][b].n;T[b].f+=agg[k][b].f;T[b].u+=agg[k][b].u;}));
+  const Tcomp=sum(T.fu,T.won,T.lost),Trc=sum(T.resch,T.canc);
+  tb.innerHTML+=`<tr class="totrow"><td class="keycell">TOTAL</td>`+
+    mc(T.sched,'sched')+mc(Tcomp,'green')+mc(T.fu,'green')+mc(T.won,'blue')+mc(T.lost,'grey')+mc(Trc,'grey')+mc(T.pending,'red')+`</tr>`;
 }
 document.querySelectorAll('.subtab').forEach(b=>b.onclick=()=>{document.querySelectorAll('.subtab').forEach(x=>x.classList.remove('active'));b.classList.add('active');MTGMODE=b.dataset.m;renderMeeting(applyFilters());});
 
