@@ -28,6 +28,11 @@
   .refresh{margin-left:auto;background:rgba(255,255,255,.16);border:1px solid rgba(255,255,255,.25);color:#fff;
     padding:9px 16px;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer}
   .refresh:hover{background:rgba(255,255,255,.26)}
+  .whoami{display:flex;flex-direction:column;align-items:flex-end;gap:1px;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.25);padding:7px 13px;border-radius:10px;font-size:12px;color:#eaf2ff}
+  .whoami b{font-size:12.5px;color:#fff}
+  .whoami .role{font-size:10px;letter-spacing:.4px;text-transform:uppercase;color:var(--b300)}
+  .chip.locked{background:#fff;color:var(--b700);border:1px solid var(--b300);cursor:default}
+  .ms.locked{opacity:.55;pointer-events:none}
 
   /* FILTER BAR — single row */
   .filterbar{background:var(--white);border:1px solid var(--line);border-radius:14px;padding:12px 14px;margin-top:14px;
@@ -138,6 +143,7 @@
     <div class="logo"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1.5" fill="#1554b8"/><rect x="14" y="3" width="7" height="7" rx="1.5" fill="#2f7bf4"/><rect x="3" y="14" width="7" height="7" rx="1.5" fill="#2f7bf4"/><rect x="14" y="14" width="7" height="7" rx="1.5" fill="#1554b8"/></svg></div>
     <div><h1><span>BDM</span> Sales Dashboard</h1><div class="sub">SOCIETY SOLAR PIPELINE · UPDATED 20 JUN 2026</div></div>
     <div class="hgrow"></div>
+    <div id="whoami" class="whoami"></div>
     <button class="refresh" onclick="clearFilters()">↺ Reset view</button>
   </header>
 
@@ -278,7 +284,7 @@ function syncFilterUI(){
   });
 }
 function tog(k,v){if(v==null||v==='')return;if(F[k].has(v))F[k].delete(v);else F[k].add(v);render();}
-function clearFilters(){FKEYS.forEach(k=>F[k].clear());render();}
+function clearFilters(){FKEYS.forEach(k=>F[k].clear());if(VIEWER.locked&&VIEWER.bdmVal)F.bdm.add(VIEWER.bdmVal);render();}
 
 function applyFilters(){
   const active=FKEYS.filter(k=>F[k].size);
@@ -292,8 +298,15 @@ function renderChip(){
   FKEYS.forEach(k=>F[k].forEach(v=>chips.push({k,v,t:FMETA[k].label+': '+(FMETA[k].month?monDisp(v):v)})));
   if(!chips.length){box.style.display='none';box.innerHTML='';return;}
   box.style.display='flex';
-  box.innerHTML='<span class="chiplead">Filtering by:</span>'+chips.map((c,i)=>`<span class="chip" data-i="${i}">${c.t} ✕</span>`).join('')+'<span class="chip clearall">Clear all ✕</span>';
-  box.querySelectorAll('.chip').forEach((ch,i)=>ch.onclick=()=>{if(ch.classList.contains('clearall'))return clearFilters();const c=chips[i];F[c.k].delete(c.v);render();});
+  box.innerHTML='<span class="chiplead">Filtering by:</span>'+chips.map((c,i)=>{
+    const locked=VIEWER.locked&&c.k==='bdm'&&c.v===VIEWER.bdmVal;
+    return `<span class="chip ${locked?'locked':''}" data-i="${i}">${c.t}${locked?' 🔒':' ✕'}</span>`;
+  }).join('')+(VIEWER.locked?'':'<span class="chip clearall">Clear all ✕</span>');
+  box.querySelectorAll('.chip').forEach((ch,i)=>ch.onclick=()=>{
+    if(ch.classList.contains('locked'))return;
+    if(ch.classList.contains('clearall'))return clearFilters();
+    const c=chips[i];F[c.k].delete(c.v);render();
+  });
 }
 
 function byLead(rows){const m={};rows.forEach(r=>{(m[r.lead]=m[r.lead]||[]).push(r);});return m;}
@@ -327,24 +340,24 @@ function render(){
 
   const wm={};wonRecs.forEach(p=>{if(p.r.wonM)wm[p.r.wonM]=(wm[p.r.wonM]||0)+1;});
   const tk=Object.keys(wm).sort();
-  charts.trend=new Chart(trend,{type:'bar',data:{labels:tk.map(monDisp),datasets:[{data:tk.map(k=>wm[k]),backgroundColor:B.b600,borderRadius:6,maxBarThickness:46}]},
+  charts.trend=new Chart(document.getElementById('trend'),{type:'bar',data:{labels:tk.map(monDisp),datasets:[{data:tk.map(k=>wm[k]),backgroundColor:B.b600,borderRadius:6,maxBarThickness:46}]},
     options:{onClick:(e,el)=>{if(el[0])tog('wonM',tk[el[0].index]);},plugins:{legend:{display:false},datalabels:dlDark},scales:{y:{beginAtZero:true,grid:{color:'#eef2f9'}},x:{grid:{display:false}}},maintainAspectRatio:false}});
 
   const sm={};projRecs.forEach(p=>{const s=p.r.pstat||'Unknown';sm[s]=(sm[s]||0)+1;});
   const sLab=Object.keys(sm),sCol=sLab.map(s=>({'Meeting completed (Sale Done)':'#1f9d6b','Meeting completed (But on follow-up)':B.b500,'Meeting Confirmed':'#6d49d6','Meeting Re-scheduled':'#e0951f','Meeting cancelled':'#9aa6ba','Meeting completed (Not interested)':'#d6493b'}[s]||B.b300));
-  charts.status=new Chart(status,{type:'doughnut',data:{labels:sLab.map(s=>s.replace('Meeting ','').replace('completed ','')),datasets:[{data:Object.values(sm),backgroundColor:sCol,borderWidth:2,borderColor:'#fff'}]},
+  charts.status=new Chart(document.getElementById('status'),{type:'doughnut',data:{labels:sLab.map(s=>s.replace('Meeting ','').replace('completed ','')),datasets:[{data:Object.values(sm),backgroundColor:sCol,borderWidth:2,borderColor:'#fff'}]},
     options:{cutout:'56%',onClick:(e,el)=>{if(el[0])tog('stat',sLab[el[0].index]);},plugins:{legend:{position:'bottom',labels:{boxWidth:9,font:{size:10},padding:7}},datalabels:{...dlWhite,formatter:v=>v>20?v:''}},maintainAspectRatio:false}});
 
   const order=['HOT','MOD','COLD','WON','LOST','INACTIVE','Not conducted'];
   const cm={};projRecs.forEach(p=>{if(p.r.cat)cm[p.r.cat]=(cm[p.r.cat]||0)+1;});
   const cCol={HOT:'#d6493b',MOD:'#e0951f',COLD:B.b400,WON:'#1f9d6b',LOST:'#9aa6ba',INACTIVE:'#c2cde0','Not conducted':'#dde4ef'};
   const cats=order.filter(o=>cm[o]);
-  charts.cat=new Chart(cat,{type:'bar',data:{labels:cats,datasets:[{data:cats.map(c=>cm[c]),backgroundColor:cats.map(c=>cCol[c]||B.b400),borderRadius:6,maxBarThickness:48}]},
+  charts.cat=new Chart(document.getElementById('cat'),{type:'bar',data:{labels:cats,datasets:[{data:cats.map(c=>cm[c]),backgroundColor:cats.map(c=>cCol[c]||B.b400),borderRadius:6,maxBarThickness:48}]},
     options:{onClick:(e,el)=>{if(el[0])tog('cat',cats[el[0].index]);},plugins:{legend:{display:false},datalabels:dlDark},scales:{y:{beginAtZero:true,grid:{color:'#eef2f9'}},x:{grid:{display:false}}},maintainAspectRatio:false}});
 
   const cym={};rows.forEach(r=>{if(r.city)cym[r.city]=(cym[r.city]||0)+1;});
   const cyArr=Object.entries(cym).sort((a,b)=>b[1]-a[1]).slice(0,10);
-  charts.city=new Chart(city,{type:'bar',data:{labels:cyArr.map(x=>x[0]),datasets:[{data:cyArr.map(x=>x[1]),backgroundColor:B.b500,borderRadius:5,maxBarThickness:22}]},
+  charts.city=new Chart(document.getElementById('city'),{type:'bar',data:{labels:cyArr.map(x=>x[0]),datasets:[{data:cyArr.map(x=>x[1]),backgroundColor:B.b500,borderRadius:5,maxBarThickness:22}]},
     options:{indexAxis:'y',onClick:(e,el)=>{if(el[0])tog('city',cyArr[el[0].index][0]);},plugins:{legend:{display:false},datalabels:{color:'#1a2440',font:{weight:700,size:10.5},anchor:'end',align:'right'}},scales:{x:{beginAtZero:true,grid:{color:'#eef2f9'}},y:{grid:{display:false}}},maintainAspectRatio:false,layout:{padding:{right:24}}}});
 
   // BDM stats
@@ -425,7 +438,39 @@ document.querySelectorAll('.tab').forEach(t=>t.onclick=()=>{
   if(tab==='overview')Object.values(charts).forEach(c=>c&&c.resize());
 });
 
+// ===== ACCESS CONTROL =====
+// A static HTML file cannot read the Chrome/Google signed-in email (browsers
+// don't expose it). Supply the viewer's email via the URL, e.g.
+//   sales_dashboard.html?email=safeek.m@solarsquare.in
+// or inject it server-side per signed-in user when hosted.
+// Admins see ALL data; everyone else is locked to their own BDM data.
+const ADMINS=['safeek.m@solarsquare.in'];   // <-- edit this list to add admins
+function bdmFromEmail(e){e=(e||'').split('@')[0];return e.split('.').filter(Boolean).map(p=>p[0].toUpperCase()+p.slice(1)).join('.');}
+const VIEWER={email:'',name:'',admin:false,locked:false,bdmVal:''};
+(function applyViewer(){
+  const q=new URLSearchParams(location.search);
+  const email=(q.get('email')||'').trim().toLowerCase();
+  const bdmParam=q.get('bdm');
+  VIEWER.email=email;
+  if(email && ADMINS.includes(email)){VIEWER.admin=true;VIEWER.name='Admin';return;}
+  const want=bdmParam||(email?bdmFromEmail(email):'');
+  if(!want){VIEWER.admin=true;VIEWER.name='All access';return;} // no identity → open
+  const opt=OPTS.bdm.find(o=>o.v.toLowerCase()===want.toLowerCase());
+  VIEWER.name=opt?opt.v:want; VIEWER.bdmVal=opt?opt.v:want; VIEWER.locked=true;
+  F.bdm.add(VIEWER.bdmVal);
+})();
+function renderWhoami(){
+  const el=document.getElementById('whoami');
+  if(VIEWER.admin){el.innerHTML=`<b>${VIEWER.email||'Admin'}</b><span class="role">${VIEWER.email?'Admin · full access':'All access'}</span>`;}
+  else el.innerHTML=`<b>${VIEWER.email||VIEWER.name}</b><span class="role">${VIEWER.name} · locked</span>`;
+}
+
 buildFilters();
+if(VIEWER.locked){
+  const ms=document.querySelector('.ms[data-k="bdm"]');
+  if(ms){ms.classList.add('locked');ms.querySelector('label').textContent='BDM (locked)';}
+}
+renderWhoami();
 render();
 </script>
 </body>
