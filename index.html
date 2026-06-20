@@ -202,7 +202,7 @@
     <div class="kpis" id="kpis"></div>
     <div class="row r-2">
       <div class="card">
-        <h3>Sales won &amp; HOTO by month</h3><div class="hint">Click a bar to filter by that month · Won (green) vs HOTO (navy)</div>
+        <h3>Sales won &amp; HOTO by month</h3><div class="hint">Last 6 months · click a bar to filter · Won (green) vs HOTO (navy)</div>
         <div class="chart-box"><canvas id="trend"></canvas></div></div>
       <div class="card">
         <h3>Conversion funnel</h3><div class="hint">Unique leads → meeting completed → sale done</div>
@@ -485,10 +485,11 @@ function render(){
 
   const wm={};wonRecs.forEach(p=>{if(p.r.wonM)wm[p.r.wonM]=(wm[p.r.wonM]||0)+1;});
   const hm={};projRecs.forEach(p=>{p.rows.forEach(x=>{if(x.hotoM)hm[x.hotoM]=(hm[x.hotoM]||0)+1;});});
-  const tk=[...new Set([...Object.keys(wm),...Object.keys(hm)])].sort();
+  const last6=(n=>{const out=[];let y=2026,m=6;for(let i=0;i<n;i++){out.unshift(y+'-'+String(m).padStart(2,'0'));m--;if(m<1){m=12;y--;}}return out;})(6);
+  const tk=last6;
   charts.trend=new Chart(document.getElementById('trend'),{type:'bar',data:{labels:tk.map(monDisp),datasets:[
-      {label:'Sale won',data:tk.map(k=>wm[k]||0),backgroundColor:'#1f9d6b',borderRadius:5,maxBarThickness:26},
-      {label:'HOTO done',data:tk.map(k=>hm[k]||0),backgroundColor:'#101a4d',borderRadius:5,maxBarThickness:26}]},
+      {label:'Sale won',data:tk.map(k=>wm[k]||0),backgroundColor:'#1f9d6b',borderRadius:5,maxBarThickness:46},
+      {label:'HOTO done',data:tk.map(k=>hm[k]||0),backgroundColor:'#101a4d',borderRadius:5,maxBarThickness:46}]},
     options:{onClick:(e,el)=>{if(el[0])tog(el[0].datasetIndex===1?'hotoM':'wonM',tk[el[0].index]);},
       plugins:{legend:{position:'top',labels:{boxWidth:10,font:{size:11}}},datalabels:{...dlDark,formatter:v=>v||''}},
       scales:{y:{beginAtZero:true,grid:{color:'#eef2f9'}},x:{grid:{display:false}}},maintainAspectRatio:false}});
