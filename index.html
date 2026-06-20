@@ -70,6 +70,11 @@
   .tabs{display:flex;gap:6px;margin-top:16px}
   .tab{background:#dfe8f7;color:var(--b700);border:none;padding:10px 20px;border-radius:11px 11px 0 0;font-size:13.5px;font-weight:700;cursor:pointer}
   .tab.active{background:var(--white);color:var(--b900);box-shadow:0 -2px 0 var(--b600) inset}
+  .subtabs{display:flex;gap:6px;margin-top:14px;margin-bottom:-2px}
+  .subtab{background:#e6eefb;color:var(--b700);border:1px solid var(--line);padding:7px 16px;border-radius:9px;font-size:12.5px;font-weight:600;cursor:pointer}
+  .subtab.active{background:var(--b600);color:#fff;border-color:var(--b600)}
+  thead th.grp{text-align:center;border-bottom:1px solid rgba(255,255,255,.25)}
+  thead th.sub{font-size:9.5px;background:var(--b800)}
 
   .kpis{display:grid;grid-template-columns:repeat(6,1fr);gap:13px;margin-top:14px}
   .kpi{background:var(--white);border:1px solid var(--line);border-radius:14px;padding:15px 16px 13px;position:relative;overflow:hidden}
@@ -153,6 +158,7 @@
   <div class="tabs">
     <button class="tab active" data-tab="overview">Overview</button>
     <button class="tab" data-tab="report">Project Report</button>
+    <button class="tab" data-tab="meeting">Meeting Report</button>
   </div>
 
   <!-- OVERVIEW TAB -->
@@ -189,6 +195,31 @@
         <th>Project status</th><th>Meeting start</th><th>Meeting end</th>
         <th>Category</th><th>Label</th><th>Last updated</th><th>Aging</th><th>Today's call status</th><th>Call log</th>
       </tr></thead><tbody></tbody></table></div></div></div>
+  </div>
+
+  <!-- MEETING REPORT TAB -->
+  <div id="tab-meeting" style="display:none">
+    <div class="subtabs">
+      <button class="subtab active" data-m="city">City-wise</button>
+      <button class="subtab" data-m="month">Monthly</button>
+    </div>
+    <div class="card">
+      <h3 id="mtg_title">Meeting report — city-wise</h3>
+      <div class="hint" id="mtg_hint"></div>
+      <div class="ptable-wrap"><table id="mtg_tbl">
+        <thead>
+          <tr>
+            <th id="mtg_keyhead" rowspan="2">City</th>
+            <th class="num" rowspan="2">Scheduled</th>
+            <th class="num grp" colspan="4">Completed</th>
+            <th class="num" rowspan="2">Reschedule / Cancelled</th>
+            <th class="num" rowspan="2">Pending</th>
+          </tr>
+          <tr>
+            <th class="num sub">Total</th><th class="num sub">Follow-up</th><th class="num sub">Sale Won</th><th class="num sub">Sale Lost</th>
+          </tr>
+        </thead><tbody></tbody></table></div>
+    </div>
   </div>
 
   <footer style="margin-top:26px;font-size:11px;color:var(--muted);text-align:center">
@@ -415,7 +446,40 @@ function render(){
   pt.querySelectorAll('.callbtn:not([disabled])').forEach(b=>b.onclick=e=>{e.stopPropagation();openModal(window.PROJ[b.dataset.i]);});
 
   syncFilterUI();renderChip();
+  renderMeeting(rows);
 }
+
+// ---- MEETING REPORT (city / month) ----
+let MTGMODE='city';
+function classifyMtg(s){
+  if(/Sale Done/.test(s))return'won';
+  if(/Not interested/.test(s))return'lost';
+  if(/follow-up/.test(s))return'fu';
+  if(/Re-scheduled/.test(s))return'resch';
+  if(/cancelled/.test(s))return'canc';
+  return'pending'; // Confirmed / other
+}
+function renderMeeting(rows){
+  const keyf=MTGMODE==='city'?(r=>r.city||'(no city)'):(r=>r.msM||'(no date)');
+  const agg={};
+  rows.forEach(r=>{const k=keyf(r);const a=agg[k]||(agg[k]={sched:0,fu:0,won:0,lost:0,resch:0,canc:0,pending:0});a.sched++;a[classifyMtg(r.fstat)]++;});
+  let keys=Object.keys(agg);
+  if(MTGMODE==='month')keys.sort();else keys.sort((a,b)=>agg[b].sched-agg[a].sched);
+  document.getElementById('mtg_keyhead').textContent=MTGMODE==='city'?'City':'Scheduled month';
+  document.getElementById('mtg_title').textContent='Meeting report — '+(MTGMODE==='city'?'city-wise':'monthly');
+  document.getElementById('mtg_hint').textContent=keys.length+(MTGMODE==='city'?' cities · ':' months · ')+rows.length+' meetings scheduled';
+  const disp=MTGMODE==='month'?monDisp:(x=>x);
+  const c=n=>`<td class="num">${n||0}</td>`;
+  const tb=document.querySelector('#mtg_tbl tbody');
+  if(!keys.length){tb.innerHTML='<tr><td colspan=8 class=empty>No meetings match the current filters</td></tr>';return;}
+  tb.innerHTML=keys.map(k=>{const a=agg[k],comp=a.fu+a.won+a.lost;
+    return `<tr><td><b>${disp(k)}</b></td><td class="num">${a.sched}</td><td class="num"><b>${comp}</b></td>${c(a.fu)}${c(a.won)}${c(a.lost)}<td class="num">${a.resch+a.canc}</td><td class="num">${a.pending}</td></tr>`;
+  }).join('');
+  const T={sched:0,fu:0,won:0,lost:0,resch:0,canc:0,pending:0};
+  keys.forEach(k=>Object.keys(T).forEach(x=>T[x]+=agg[k][x]));
+  tb.innerHTML+=`<tr style="font-weight:700;background:#eef4fd"><td>TOTAL</td><td class="num">${T.sched}</td><td class="num">${T.fu+T.won+T.lost}</td><td class="num">${T.fu}</td><td class="num">${T.won}</td><td class="num">${T.lost}</td><td class="num">${T.resch+T.canc}</td><td class="num">${T.pending}</td></tr>`;
+}
+document.querySelectorAll('.subtab').forEach(b=>b.onclick=()=>{document.querySelectorAll('.subtab').forEach(x=>x.classList.remove('active'));b.classList.add('active');MTGMODE=b.dataset.m;renderMeeting(applyFilters());});
 
 function openModal(p){
   const r=p.r;let logs=[];p.rows.forEach(t=>(t.callLog||[]).forEach(c=>logs.push(c)));
@@ -435,6 +499,7 @@ document.querySelectorAll('.tab').forEach(t=>t.onclick=()=>{
   const tab=t.dataset.tab;
   document.getElementById('tab-overview').style.display=tab==='overview'?'':'none';
   document.getElementById('tab-report').style.display=tab==='report'?'':'none';
+  document.getElementById('tab-meeting').style.display=tab==='meeting'?'':'none';
   if(tab==='overview')Object.values(charts).forEach(c=>c&&c.resize());
 });
 
