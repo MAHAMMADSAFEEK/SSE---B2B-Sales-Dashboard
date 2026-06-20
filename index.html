@@ -39,7 +39,7 @@
   .ms-btn::after{content:"▾";position:absolute;right:9px;top:8px;color:var(--b600);font-size:11px}
   .ms-btn.has{background:var(--b600);color:#fff;border-color:var(--b600);font-weight:600}
   .ms-btn.has::after{color:#fff}
-  .ms-panel{display:none;position:absolute;z-index:40;top:100%;left:0;margin-top:4px;width:240px;background:#fff;
+  .ms-panel{display:none;position:fixed;z-index:80;width:240px;background:#fff;
     border:1px solid var(--line);border-radius:11px;box-shadow:0 14px 34px rgba(16,26,77,.22);overflow:hidden}
   .ms-panel.open{display:block}
   .ms-search{width:100%;border:none;border-bottom:1px solid var(--line);padding:10px 12px;font-size:13px;outline:none}
@@ -245,7 +245,20 @@ function buildFilters(){
       </div>`;
     bar.appendChild(ms);
     const btn=ms.querySelector('.ms-btn'),panel=ms.querySelector('.ms-panel');
-    btn.onclick=e=>{e.stopPropagation();document.querySelectorAll('.ms-panel.open').forEach(p=>{if(p!==panel)p.classList.remove('open');});panel.classList.toggle('open');};
+    panel.addEventListener('click',e=>e.stopPropagation());
+    btn.onclick=e=>{
+      e.stopPropagation();
+      const wasOpen=panel.classList.contains('open');
+      document.querySelectorAll('.ms-panel.open').forEach(p=>p.classList.remove('open'));
+      if(wasOpen)return;
+      const r=btn.getBoundingClientRect();
+      let left=r.left; if(left+240>window.innerWidth-8) left=window.innerWidth-248;
+      panel.style.left=left+'px';
+      panel.style.top=(r.bottom+4)+'px';
+      panel.style.maxHeight=(window.innerHeight-r.bottom-20)+'px';
+      panel.classList.add('open');
+      const s=ms.querySelector('.ms-search');s.value='';s.dispatchEvent(new Event('input'));
+    };
     ms.querySelector('.ms-search').oninput=e=>{const q=e.target.value.toLowerCase();ms.querySelectorAll('.ms-opt').forEach(o=>{o.style.display=o.querySelector('.nm').textContent.toLowerCase().includes(q)?'':'none';});};
     ms.querySelectorAll('.ms-opt input').forEach(cb=>cb.onchange=()=>{const v=cb.value;if(cb.checked)F[k].add(v);else F[k].delete(v);render();});
     ms.querySelector('.ms-clear').onclick=e=>{e.stopPropagation();F[k].clear();render();};
@@ -254,6 +267,7 @@ function buildFilters(){
   const cb=document.createElement('button');cb.className='clearbtn';cb.textContent='Clear all';cb.onclick=clearFilters;bar.appendChild(cb);
 }
 document.addEventListener('click',()=>document.querySelectorAll('.ms-panel.open').forEach(p=>p.classList.remove('open')));
+['scroll','resize'].forEach(ev=>window.addEventListener(ev,()=>document.querySelectorAll('.ms-panel.open').forEach(p=>p.classList.remove('open')),true));
 
 function syncFilterUI(){
   document.querySelectorAll('.ms').forEach(ms=>{
