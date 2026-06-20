@@ -93,6 +93,15 @@
   .tag{font-size:10.5px;color:var(--muted);background:#f1f4fa;border-radius:6px;padding:2px 7px}
   .empty{padding:30px;text-align:center;color:var(--muted)}
 
+  /* active filter chips */
+  #drillchip{display:none;flex-wrap:wrap;align-items:center;gap:8px;margin-top:12px}
+  .chiplead{font-size:11.5px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px}
+  .chip{background:var(--b600);color:#fff;font-size:12px;font-weight:600;padding:5px 11px;border-radius:999px;cursor:pointer;user-select:none}
+  .chip:hover{background:var(--b700)}
+  .chip.clearall{background:#fff;color:var(--b700);border:1px solid var(--b300)}
+  .chip.clearall:hover{background:var(--b50)}
+  canvas{cursor:pointer}
+
   /* MODAL */
   .modal-bg{position:fixed;inset:0;background:rgba(16,26,77,.45);display:none;align-items:center;justify-content:center;z-index:50;padding:20px}
   .modal-bg.show{display:flex}
@@ -138,6 +147,9 @@
     <div class="fld"><label>Aging Bucket</label><select id="f_age"></select></div>
     <div class="fld"><button class="clearbtn" onclick="clearFilters()">Clear all filters</button></div>
   </div>
+
+  <!-- ACTIVE FILTER CHIPS -->
+  <div id="drillchip"></div>
 
   <!-- KPIs -->
   <div class="kpis" id="kpis"></div>
@@ -249,14 +261,50 @@ fillSelect('f_age',AGES);
 function getF(){return{
   msM:f_msM.value,cmpM:f_cmpM.value,wonM:f_wonM.value,cat:f_cat.value,label:f_label.value,
   city:f_city.value,bdm:f_bdm.value,mgr:f_mgr.value,age:f_age.value};}
-function clearFilters(){['f_msM','f_cmpM','f_wonM','f_cat','f_label','f_city','f_bdm','f_mgr','f_age'].forEach(i=>document.getElementById(i).value='');render();}
+let DRILL=null; // {key,val,label}
+function clearFilters(){['f_msM','f_cmpM','f_wonM','f_cat','f_label','f_city','f_bdm','f_mgr','f_age'].forEach(i=>document.getElementById(i).value='');DRILL=null;render();}
+// chart-click → toggle a dropdown filter
+function pick(selId,val){const s=document.getElementById(selId);if(val==null||val==='')return;s.value=(s.value===val)?'':val;render();}
+// chart-click → toggle the status drill (no dropdown for status)
+function pickDrill(key,val,label){DRILL=(DRILL&&DRILL.key===key&&DRILL.val===val)?null:{key,val,label};render();}
 
-function applyFilters(){
+// A row "matches" when it satisfies every active filter + drill.
+function rowMatch(r){
   const f=getF();
-  return ROWS.filter(r=>
-    (!f.msM||r.msM===f.msM)&&(!f.cmpM||r.cmpM===f.cmpM)&&(!f.wonM||r.wonM===f.wonM)&&
-    (!f.cat||r.cat===f.cat)&&(!f.label||r.label===f.label)&&(!f.city||r.city===f.city)&&
-    (!f.bdm||r.bdm===f.bdm)&&(!f.mgr||r.mgr===f.mgr)&&(!f.age||r.age===f.age));
+  if(f.msM&&r.msM!==f.msM)return false;
+  if(f.cmpM&&r.cmpM!==f.cmpM)return false;
+  if(f.wonM&&r.wonM!==f.wonM)return false;
+  if(f.cat&&r.cat!==f.cat)return false;
+  if(f.label&&r.label!==f.label)return false;
+  if(f.city&&r.city!==f.city)return false;
+  if(f.bdm&&r.bdm!==f.bdm)return false;
+  if(f.mgr&&r.mgr!==f.mgr)return false;
+  if(f.age&&r.age!==f.age)return false;
+  if(DRILL&&r[DRILL.key]!==DRILL.val)return false;
+  return true;
+}
+// Lead-based: include EVERY row of any lead that has at least one matching row.
+function applyFilters(){
+  const keep=new Set();
+  ROWS.forEach(r=>{if(rowMatch(r))keep.add(r.lead);});
+  return ROWS.filter(r=>keep.has(r.lead));
+}
+function renderChip(){
+  const f=getF();
+  const chips=[];
+  const labels={msM:'Sched',cmpM:'Completed',wonM:'Won',cat:'Category',label:'Label',city:'City',bdm:'BDM',mgr:'Manager',age:'Aging'};
+  Object.keys(labels).forEach(k=>{if(f[k])chips.push({k,t:labels[k]+': '+(k.endsWith('M')?monDisp(f[k]):f[k])});});
+  if(DRILL)chips.push({k:'__drill',t:DRILL.label});
+  const box=document.getElementById('drillchip');
+  if(!chips.length){box.style.display='none';box.innerHTML='';return;}
+  box.style.display='flex';
+  box.innerHTML='<span class="chiplead">Filtering by:</span>'+chips.map(c=>`<span class="chip" data-k="${c.k}">${c.t} ✕</span>`).join('')+'<span class="chip clearall">Clear all ✕</span>';
+  box.querySelectorAll('.chip').forEach(ch=>ch.onclick=()=>{
+    const k=ch.dataset.k;
+    if(ch.classList.contains('clearall'))return clearFilters();
+    if(k==='__drill')DRILL=null; else document.getElementById('f_'+k).value='';
+    render();
+  });
 }
 
 // group rows by lead -> representative project record (latest effective)
@@ -311,16 +359,16 @@ function render(){
   const tk=Object.keys(wm).sort();
   charts.trend=new Chart(trend,{type:'bar',
     data:{labels:tk.map(monDisp),datasets:[{data:tk.map(k=>wm[k]),backgroundColor:B.b600,borderRadius:6,maxBarThickness:46}]},
-    options:{plugins:{legend:{display:false},datalabels:{...dlDark}},
+    options:{onClick:(e,els)=>{if(els[0])pick('f_wonM',tk[els[0].index]);},
+      plugins:{legend:{display:false},datalabels:{...dlDark}},
       scales:{y:{beginAtZero:true,grid:{color:'#eef2f9'}},x:{grid:{display:false}}},maintainAspectRatio:false}});
-
-  // status doughnut
   const sc={};rows.forEach(r=>{});
   const sm={};projRecs.forEach(p=>{const s=p.r.pstat||'Unknown';sm[s]=(sm[s]||0)+1;});
   const sLab=Object.keys(sm), sCol=sLab.map(s=>({'Meeting completed (Sale Done)':'#1f9d6b','Meeting completed (But on follow-up)':B.b500,'Meeting Confirmed':'#6d49d6','Meeting Re-scheduled':'#e0951f','Meeting cancelled':'#9aa6ba','Meeting completed (Not interested)':'#d6493b'}[s]||B.b300));
   charts.status=new Chart(status,{type:'doughnut',
     data:{labels:sLab.map(s=>s.replace('Meeting ','').replace('completed ','')),datasets:[{data:Object.values(sm),backgroundColor:sCol,borderWidth:2,borderColor:'#fff'}]},
-    options:{cutout:'56%',plugins:{legend:{position:'bottom',labels:{boxWidth:9,font:{size:10},padding:7}},
+    options:{cutout:'56%',onClick:(e,els)=>{if(els[0])pickDrill('pstat',sLab[els[0].index],'Status: '+sLab[els[0].index].replace('Meeting ',''));},
+      plugins:{legend:{position:'bottom',labels:{boxWidth:9,font:{size:10},padding:7}},
       datalabels:{...dlWhite,formatter:(v)=>v>20?v:''}},maintainAspectRatio:false}});
 
   // category
@@ -330,7 +378,8 @@ function render(){
   const cats=order.filter(o=>cm[o]);
   charts.cat=new Chart(cat,{type:'bar',
     data:{labels:cats,datasets:[{data:cats.map(c=>cm[c]),backgroundColor:cats.map(c=>cCol[c]||B.b400),borderRadius:6,maxBarThickness:48}]},
-    options:{plugins:{legend:{display:false},datalabels:{...dlDark}},
+    options:{onClick:(e,els)=>{if(els[0])pick('f_cat',cats[els[0].index]);},
+      plugins:{legend:{display:false},datalabels:{...dlDark}},
       scales:{y:{beginAtZero:true,grid:{color:'#eef2f9'}},x:{grid:{display:false}}},maintainAspectRatio:false}});
 
   // city
@@ -338,20 +387,26 @@ function render(){
   const cyArr=Object.entries(cym).sort((a,b)=>b[1]-a[1]).slice(0,10);
   charts.city=new Chart(city,{type:'bar',
     data:{labels:cyArr.map(x=>x[0]),datasets:[{data:cyArr.map(x=>x[1]),backgroundColor:B.b500,borderRadius:5,maxBarThickness:22}]},
-    options:{indexAxis:'y',plugins:{legend:{display:false},datalabels:{color:'#1a2440',font:{weight:700,size:10.5},anchor:'end',align:'right'}},
+    options:{indexAxis:'y',onClick:(e,els)=>{if(els[0])pick('f_city',cyArr[els[0].index][0]);},
+      plugins:{legend:{display:false},datalabels:{color:'#1a2440',font:{weight:700,size:10.5},anchor:'end',align:'right'}},
       scales:{x:{beginAtZero:true,grid:{color:'#eef2f9'}},y:{grid:{display:false}}},maintainAspectRatio:false,layout:{padding:{right:24}}}});
 
   // BDM leaderboard
   const bm={};projRecs.forEach(p=>{const b=p.r.bdm||'Unknown';(bm[b]=bm[b]||{leads:0,won:0}); bm[b].leads++; if(isWon(p.r.pstat))bm[b].won++;});
   const bl=Object.entries(bm).map(([n,v])=>({n,...v,rate:v.leads?100*v.won/v.leads:0})).sort((a,b)=>b.won-a.won||b.leads-a.leads).slice(0,15);
-  document.querySelector('#lead_tbl tbody').innerHTML=bl.length?bl.map((b,i)=>`<tr><td><span class="tag">${i+1}</span></td><td><b>${b.n}</b></td><td class="num">${b.leads}</td><td class="num"><b>${b.won}</b></td><td class="num">${b.rate.toFixed(1)}%</td></tr>`).join(''):'<tr><td colspan=5 class=empty>No data for these filters</td></tr>';
+  const lt=document.querySelector('#lead_tbl tbody');
+  lt.innerHTML=bl.length?bl.map((b,i)=>`<tr class="clk" data-bdm="${b.n.replace(/"/g,'&quot;')}" style="cursor:pointer"><td><span class="tag">${i+1}</span></td><td><b>${b.n}</b></td><td class="num">${b.leads}</td><td class="num"><b>${b.won}</b></td><td class="num">${b.rate.toFixed(1)}%</td></tr>`).join(''):'<tr><td colspan=5 class=empty>No data for these filters</td></tr>';
+  lt.querySelectorAll('.clk').forEach(tr=>tr.onclick=()=>pick('f_bdm',tr.dataset.bdm));
 
   // pending reasons
   const lm={};projRecs.forEach(p=>{const l=p.r.label;if(l)lm[l]=(lm[l]||0)+1;});
   const la=Object.entries(lm).sort((a,b)=>b[1]-a[1]).slice(0,9);
-  document.querySelector('#label_tbl tbody').innerHTML=la.length?la.map(x=>`<tr><td>${x[0]}</td><td class="num">${x[1]}</td></tr>`).join(''):'<tr><td colspan=2 class=empty>No data</td></tr>';
+  const lbt=document.querySelector('#label_tbl tbody');
+  lbt.innerHTML=la.length?la.map(x=>`<tr class="clk" data-label="${x[0].replace(/"/g,'&quot;')}" style="cursor:pointer"><td>${x[0]}</td><td class="num">${x[1]}</td></tr>`).join(''):'<tr><td colspan=2 class=empty>No data</td></tr>';
+  lbt.querySelectorAll('.clk').forEach(tr=>tr.onclick=()=>pick('f_label',tr.dataset.label));
 
   renderReport(projRecs,bm);
+  renderChip();
 }
 
 // ---- PROJECT REPORT (BDM -> project -> tasks) ----
