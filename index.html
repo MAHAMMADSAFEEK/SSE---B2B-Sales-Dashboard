@@ -196,12 +196,14 @@
   <!-- OVERVIEW TAB -->
   <div id="tab-overview">
     <div class="kpis" id="kpis"></div>
-    <div class="row r-wide"><div class="card">
-      <h3>Sales won by month</h3><div class="hint">Click a month to filter · counts shown on bars</div>
-      <div class="chart-box"><canvas id="trend"></canvas></div></div></div>
-    <div class="row r-wide"><div class="card">
-      <h3>Conversion funnel</h3><div class="hint">Total unique leads → meeting completed → sale done</div>
-      <div id="funnel" class="funnel"></div></div></div>
+    <div class="row r-2">
+      <div class="card">
+        <h3>Sales won by month</h3><div class="hint">Click a month to filter · counts shown on bars</div>
+        <div class="chart-box"><canvas id="trend"></canvas></div></div>
+      <div class="card">
+        <h3>Conversion funnel</h3><div class="hint">Unique leads → meeting completed → sale done</div>
+        <div id="funnel" class="funnel"></div></div>
+    </div>
     <div class="row r-3">
       <div class="card"><h3>Project status mix</h3><div class="hint">Click a slice to filter</div><div class="chart-box sm"><canvas id="status"></canvas></div></div>
       <div class="card"><h3>Lead temperature</h3><div class="hint">Click a bar to filter</div><div class="chart-box sm"><canvas id="cat"></canvas></div></div>
@@ -357,7 +359,9 @@ function buildFilters(){
   const cb=document.createElement('button');cb.className='clearbtn';cb.textContent='Clear all';cb.onclick=clearFilters;bar.appendChild(cb);
 }
 document.addEventListener('click',()=>document.querySelectorAll('.ms-panel.open').forEach(p=>p.classList.remove('open')));
-['scroll','resize'].forEach(ev=>window.addEventListener(ev,()=>document.querySelectorAll('.ms-panel.open').forEach(p=>p.classList.remove('open')),true));
+function closePanels(){document.querySelectorAll('.ms-panel.open').forEach(p=>p.classList.remove('open'));}
+window.addEventListener('scroll',e=>{if(e.target&&e.target.closest&&e.target.closest('.ms-panel'))return;closePanels();},true);
+window.addEventListener('resize',closePanels);
 
 function syncFilterUI(){
   document.querySelectorAll('.ms').forEach(ms=>{
