@@ -241,9 +241,9 @@
   <!-- MEETING REPORT TAB -->
   <div id="tab-meeting" style="display:none">
     <div class="subtabs">
-      <button class="subtab active" data-m="city">City-wise</button>
+      <button class="subtab active" data-m="bdm">BDM-wise</button>
       <button class="subtab" data-m="month">Monthly</button>
-      <button class="subtab" data-m="bdm">BDM-wise</button>
+      <button class="subtab" data-m="city">City-wise</button>
     </div>
     <div class="card">
       <h3 id="mtg_title">Meeting report — city-wise</h3>
@@ -284,8 +284,8 @@
   <!-- COHORT FUNNEL TAB -->
   <div id="tab-cohort" style="display:none">
     <div class="subtabs">
-      <button class="csub active" data-c="month">By Month</button>
-      <button class="csub" data-c="bdm">By BDM</button>
+      <button class="csub active" data-c="bdm">By BDM</button>
+      <button class="csub" data-c="month">By Month</button>
       <button class="csub" data-c="city">By City</button>
     </div>
     <div class="card">
@@ -300,8 +300,8 @@
   <!-- LEAD JOURNEY TAB -->
   <div id="tab-journey" style="display:none">
     <div class="subtabs">
-      <button class="jsub active" data-j="month">By Scheduled Month</button>
-      <button class="jsub" data-j="bdm">By BDM</button>
+      <button class="jsub active" data-j="bdm">By BDM</button>
+      <button class="jsub" data-j="month">By Scheduled Month</button>
       <button class="jsub" data-j="city">By City</button>
     </div>
     <div class="card">
@@ -562,7 +562,7 @@ function render(){
 }
 
 // ---- COHORT FUNNEL (period activity: by month / bdm / city) ----
-let COHORTMODE='month';
+let COHORTMODE='bdm';
 function pctCls(p){return p>=20?'hi':p>=8?'mid':'lo';}
 function pctCell(n,d){const p=d?100*n/d:0;return `<td><span class="pct ${pctCls(p)}">${p.toFixed(1)}%</span></td>`;}
 function renderCohort(rows){
@@ -590,7 +590,7 @@ function renderCohort(rows){
 document.querySelectorAll('.csub').forEach(b=>b.onclick=()=>{document.querySelectorAll('.csub').forEach(x=>x.classList.remove('active'));b.classList.add('active');COHORTMODE=b.dataset.c;renderCohort(applyFilters());});
 
 // ---- LEAD JOURNEY (lead cohort followed to outcome) ----
-let JOURNEYMODE='month';
+let JOURNEYMODE='bdm';
 function renderJourney(rows){
   const leads=byLead(rows);const agg={};const A=k=>agg[k]||(agg[k]={n:0,c:0,w:0});
   Object.keys(leads).forEach(id=>{
@@ -648,7 +648,7 @@ function renderTasks(rows){
 document.querySelectorAll('.tsub').forEach(b=>b.onclick=()=>{document.querySelectorAll('.tsub').forEach(x=>x.classList.remove('active'));b.classList.add('active');TASKMODE=b.dataset.t;renderTasks(applyFilters());});
 
 // ---- MEETING REPORT (city / month) ----
-let MTGMODE='city';
+let MTGMODE='bdm';
 function classifyMtg(s){
   if(/Sale Done/.test(s))return'won';
   if(/Not interested/.test(s))return'lost';
