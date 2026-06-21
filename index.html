@@ -399,13 +399,15 @@ function statusClass(s){if(/Sale Done/.test(s))return'st-won';if(/follow-up/.tes
 function ageClass(a){const i=AGES.indexOf(a);return i<0?'':'age-'+(i+1);}
 
 // ---- filter model ----
-const FKEYS=['msM','cmpM','wonM','hotoM','cat','label','city','bdm','mgr','age','stat'];
+const FKEYS=['msM','cmpM','wonM','hotoM','stat','cat','label','city','bdm','mgr','age'];
 const FMETA={msM:{label:'Meeting Sched.',month:1},cmpM:{label:'Completed Mo.',month:1},wonM:{label:'Sale Won Mo.',month:1},
   hotoM:{label:'HOTO Month',month:1},
   cat:{label:'Lead Category'},label:{label:'Lead Label'},city:{label:'City'},bdm:{label:'BDM'},mgr:{label:'Manager'},
-  age:{label:'Aging',fixed:AGES},stat:{label:'Status',noUI:1}};
+  age:{label:'Aging',fixed:AGES},stat:{label:'Final Status',lead:1,clean:1}};
 const F={};FKEYS.forEach(k=>F[k]=new Set());
-function fld(r,k){return k==='stat'?r.pstat:r[k];}
+function fld(r,k){return k==='stat'?r.fstat:r[k];}
+function finalStat(rs){const last=rs[rs.length-1];return last?last.fstat:'';}
+function dval(k,v){return FMETA[k].month?monDisp(v):(FMETA[k].clean?(''+v).replace('Meeting ',''):v);}
 
 const LEADMAP={};ROWS.forEach(r=>{(LEADMAP[r.lead]=LEADMAP[r.lead]||[]).push(r);});
 const LEADIDS=Object.keys(LEADMAP);
@@ -413,7 +415,11 @@ const LEADIDS=Object.keys(LEADMAP);
 const OPTS={};
 FKEYS.forEach(k=>{
   const cnt={};
-  LEADIDS.forEach(id=>{const vals=new Set(LEADMAP[id].map(r=>fld(r,k)).filter(Boolean));vals.forEach(v=>cnt[v]=(cnt[v]||0)+1);});
+  if(FMETA[k].lead){
+    LEADIDS.forEach(id=>{const v=finalStat(LEADMAP[id]);if(v)cnt[v]=(cnt[v]||0)+1;});
+  }else{
+    LEADIDS.forEach(id=>{const vals=new Set(LEADMAP[id].map(r=>fld(r,k)).filter(Boolean));vals.forEach(v=>cnt[v]=(cnt[v]||0)+1);});
+  }
   let arr=Object.keys(cnt);
   if(FMETA[k].fixed) arr=FMETA[k].fixed.filter(v=>cnt[v]);
   else if(FMETA[k].month) arr.sort();
@@ -431,7 +437,7 @@ function buildFilters(){
       <button class="ms-btn" type="button">All</button>
       <div class="ms-panel">
         <input class="ms-search" placeholder="Search...">
-        <div class="ms-opts">${OPTS[k].map(o=>`<label class="ms-opt"><input type="checkbox" value="${String(o.v).replace(/"/g,'&quot;')}"><span class="nm">${FMETA[k].month?monDisp(o.v):o.v}</span><span class="cnt">${o.c}</span></label>`).join('')}</div>
+        <div class="ms-opts">${OPTS[k].map(o=>`<label class="ms-opt"><input type="checkbox" value="${String(o.v).replace(/"/g,'&quot;')}"><span class="nm">${dval(k,o.v)}</span><span class="cnt">${o.c}</span></label>`).join('')}</div>
         <div class="ms-foot"><a class="ms-clear">Clear</a><a class="ms-close">Done</a></div>
       </div>`;
     bar.appendChild(ms);
@@ -466,7 +472,7 @@ function syncFilterUI(){
   document.querySelectorAll('.ms').forEach(ms=>{
     const k=ms.dataset.k,sel=F[k],btn=ms.querySelector('.ms-btn');
     btn.classList.toggle('has',sel.size>0);
-    btn.textContent=sel.size===0?'All':sel.size===1?(FMETA[k].month?monDisp([...sel][0]):[...sel][0]):sel.size+' selected';
+    btn.textContent=sel.size===0?'All':sel.size===1?dval(k,[...sel][0]):sel.size+' selected';
     ms.querySelectorAll('.ms-opt input').forEach(cb=>cb.checked=sel.has(cb.value));
   });
 }
@@ -477,12 +483,12 @@ function applyFilters(){
   const active=FKEYS.filter(k=>F[k].size);
   if(!active.length)return ROWS.slice();
   const keep=new Set();
-  LEADIDS.forEach(id=>{const rs=LEADMAP[id];if(active.every(k=>rs.some(r=>F[k].has(fld(r,k)))))keep.add(id);});
+  LEADIDS.forEach(id=>{const rs=LEADMAP[id];if(active.every(k=>FMETA[k].lead?F[k].has(finalStat(rs)):rs.some(r=>F[k].has(fld(r,k)))))keep.add(id);});
   return ROWS.filter(r=>keep.has(r.lead));
 }
 function renderChip(){
   const box=document.getElementById('drillchip');const chips=[];
-  FKEYS.forEach(k=>F[k].forEach(v=>chips.push({k,v,t:FMETA[k].label+': '+(FMETA[k].month?monDisp(v):v)})));
+  FKEYS.forEach(k=>F[k].forEach(v=>chips.push({k,v,t:FMETA[k].label+': '+dval(k,v)})));
   if(!chips.length){box.style.display='none';box.innerHTML='';return;}
   box.style.display='flex';
   box.innerHTML='<span class="chiplead">Filtering by:</span>'+chips.map((c,i)=>{
