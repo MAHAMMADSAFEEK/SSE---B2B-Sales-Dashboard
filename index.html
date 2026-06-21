@@ -248,10 +248,13 @@
       <div class="card"><h3>Meetings by city<button class="detbtn" data-rep="meetings">Details ▸</button></h3><div class="hint">Click bar to filter</div><div class="chart-box sm"><canvas id="city"></canvas></div></div>
       <div class="card"><h3>Conversion funnel<button class="detbtn" data-rep="funnel">Details ▸</button></h3><div class="hint">Leads → completed → won → HOTO</div><div id="funnel" class="funnel"></div></div>
     </div>
-    <div class="row r-wide">
+    <div class="row r-2">
       <div class="card">
         <h3>Sales won &amp; HOTO by month<button class="detbtn" data-rep="wonhoto">Details ▸</button></h3><div class="hint">Last 6 months · click a bar to filter · Won (green) vs HOTO (navy)</div>
         <div class="chart-box"><canvas id="trend"></canvas></div></div>
+      <div class="card">
+        <h3>Aging — open pipeline<button class="detbtn" data-rep="aging">Details ▸</button></h3><div class="hint">Open leads by days since last update</div>
+        <div class="chart-box"><canvas id="aging"></canvas></div></div>
     </div>
     <div class="row r-2">
       <div class="card"><h3>BDM leaderboard</h3><div class="hint">Click a BDM to filter</div>
@@ -567,6 +570,13 @@ function render(){
   charts.city=new Chart(document.getElementById('city'),{type:'bar',data:{labels:cyArr.map(x=>x[0]),datasets:[{data:cyArr.map(x=>x[1]),backgroundColor:B.b500,borderRadius:5,maxBarThickness:22}]},
     options:{indexAxis:'y',onClick:(e,el)=>{if(el[0])tog('city',cyArr[el[0].index][0]);},plugins:{legend:{display:false},datalabels:{color:'#1a2440',font:{weight:700,size:10.5},anchor:'end',align:'right'}},scales:{x:{beginAtZero:true,grid:{color:'#eef2f9'}},y:{grid:{display:false}}},maintainAspectRatio:false,layout:{padding:{right:24}}}});
 
+  // aging chart (project-level, open pipeline)
+  const am={};projRecs.forEach(p=>{if(p.r.age)am[p.r.age]=(am[p.r.age]||0)+1;});
+  const aKeys=AGES.filter(a=>am[a]);
+  const aCol=['#1f9d6b','#5a8a25','#9a7406','#b5670e','#c2531a','#d6493b','#9c1f12'];
+  charts.aging=new Chart(document.getElementById('aging'),{type:'bar',data:{labels:aKeys,datasets:[{data:aKeys.map(a=>am[a]),backgroundColor:aKeys.map(a=>aCol[AGES.indexOf(a)]||B.b500),borderRadius:6,maxBarThickness:46}]},
+    options:{onClick:(e,el)=>{if(el[0])tog('age',aKeys[el[0].index]);},plugins:{legend:{display:false},datalabels:{...dlDark,formatter:v=>v||''}},scales:{y:{beginAtZero:true,grid:{color:'#eef2f9'}},x:{grid:{display:false}}},maintainAspectRatio:false}});
+
   // BDM stats
   const bm={};projRecs.forEach(p=>{const b=p.r.bdm||'Unknown';(bm[b]=bm[b]||{leads:0,meet:0,won:0,cap:0,wcap:0,hoto:0,hcap:0});bm[b].leads++;bm[b].meet+=p.rows.length;bm[b].cap+=p.r.size||0;if(isWon(p.r.pstat)){bm[b].won++;bm[b].wcap+=p.r.size||0;}if(p.rows.some(x=>x.hoto)){bm[b].hoto++;bm[b].hcap+=p.r.size||0;}});
 
@@ -817,6 +827,7 @@ const REPORTS={
   funnel:{title:'Conversion funnel',kind:'funnel'},
   status:{title:'Project status mix',kind:'matrix',field:'pstat',monthField:'msM'},
   cat:{title:'Lead temperature',kind:'matrix',field:'cat',monthField:'msM'},
+  aging:{title:'Aging — open pipeline',kind:'matrix',field:'age',monthField:'msM'},
 };
 REPORTS.meetings_ = REPORTS.meetings;
 let RKEY=null,RMODE='city';
@@ -879,7 +890,8 @@ function drawReport(){
     agg=G;
   }
   else if(cfg.kind==='matrix'){
-    const cols=[...new Set(rows.map(r=>r[cfg.field]).filter(Boolean))];
+    let cols=[...new Set(rows.map(r=>r[cfg.field]).filter(Boolean))];
+    if(cfg.field==='age')cols.sort((a,b)=>AGES.indexOf(a)-AGES.indexOf(b));
     const km=RMODE==='city'?(p=>p.r.city||'(none)'):RMODE==='bdm'?(p=>p.r.bdm||'(none)'):monthKey;
     const G={};projRecs.forEach(p=>{const k=km(p);const v=p.r[cfg.field]||'(none)';(G[k]=G[k]||{});(G[k][v]=G[k][v]||[]).push(p);});
     const keys=RMODE==='month'?Object.keys(G).sort():Object.keys(G).sort((a,b)=>Object.values(G[b]).reduce((x,y)=>x+y.length,0)-Object.values(G[a]).reduce((x,y)=>x+y.length,0));
@@ -893,7 +905,7 @@ function openProjects(members,title){
   members=toProjRecs(members);
   document.getElementById('p_title').textContent=title||'Project-wise data';
   document.getElementById('p_sub').textContent=(members?members.length:0)+' projects';
-  const list=(members||[]).slice().sort((a,b)=>(b.r.size||0)-(a.r.size||0));
+  const list=(members||[]).slice().sort((a,b)=>(a.r.pstat||'').localeCompare(b.r.pstat||'')||(b.r.size||0)-(a.r.size||0));
   const rws=list.map(p=>{const r=p.r;const ph=(p.rows.map(x=>x.hoto).filter(Boolean).sort()[0])||'';
     return `<tr><td>${r.city||'—'}</td><td>${r.bdm||'—'}</td><td><b>${r.proj||'—'}</b></td><td class="num">${r.size?fmt(r.size):'—'}</td>`+
       `<td><span class="pill ${statusClass(r.pstat)}">${(r.pstat||'').replace('Meeting ','')||'—'}</span></td>`+
