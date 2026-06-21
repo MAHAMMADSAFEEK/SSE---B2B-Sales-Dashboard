@@ -137,6 +137,8 @@
   .cellnum:hover{box-shadow:0 0 0 2px var(--b500) inset;transform:scale(1.04)}
   .dcell{cursor:pointer;transition:box-shadow .1s}
   .dcell:hover{box-shadow:0 0 0 2px var(--b500) inset}
+  .kclick{cursor:pointer;color:var(--b700)!important;text-decoration:underline dotted;text-underline-offset:3px}
+  .kclick:hover{color:var(--b500)!important}
   .fmini .fm-bar{cursor:pointer}
   .fmini .fm-bar:hover{filter:brightness(1.1)}
   #pmodal{z-index:90}
@@ -727,35 +729,66 @@ function classifyMtg(s){
   if(/cancelled/.test(s))return'canc';
   return'pending'; // Confirmed / other
 }
-function renderMeeting(rows){
-  const keyf=MTGMODE==='city'?(r=>r.city||'(no city)'):MTGMODE==='bdm'?(r=>r.bdm||'(no BDM)'):(r=>r.msM||'(no date)');
+function meetingThead(label){
+  return `<thead><tr>
+    <th rowspan="2">${label}</th><th class="num" rowspan="2">Scheduled</th>
+    <th class="num grp" colspan="4">Completed</th>
+    <th class="num" rowspan="2">HOTO</th>
+    <th class="num" rowspan="2">Reschedule / Cancelled</th>
+    <th class="num" rowspan="2">Pending</th></tr>
+    <tr><th class="num sub">Total</th><th class="num sub">Followup Meeting</th><th class="num sub">Sale Won</th><th class="num sub">Sale Lost</th></tr></thead>`;
+}
+function buildMeeting(rows,mode,clickableKeys){
+  const keyf=mode==='city'?(r=>r.city||'(no city)'):mode==='bdm'?(r=>r.bdm||'(no BDM)'):(r=>/^\d{4}-\d{2}$/.test(r.msM)?r.msM:'(no date)');
   const blank=()=>({sched:{n:0,f:0,u:0,m:[]},fu:{n:0,f:0,u:0,m:[]},won:{n:0,f:0,u:0,m:[]},lost:{n:0,f:0,u:0,m:[]},resch:{n:0,f:0,u:0,m:[]},canc:{n:0,f:0,u:0,m:[]},pending:{n:0,f:0,u:0,m:[]},hoto:{n:0,f:0,u:0,m:[]}});
   const bump=(o,r)=>{o.n++;o.m.push(r);if(r.ftype==='Fresh Meeting')o.f++;else if(r.ftype==='Follow-up Meeting')o.u++;};
   const agg={};
   rows.forEach(r=>{const k=keyf(r);const a=agg[k]||(agg[k]=blank());bump(a.sched,r);bump(a[classifyMtg(r.fstat)],r);if(r.hoto)bump(a.hoto,r);});
   let keys=Object.keys(agg);
-  if(MTGMODE==='month')keys.sort();else keys.sort((a,b)=>agg[b].sched.n-agg[a].sched.n);
-  const unit={city:'City',bdm:'BDM',month:'Scheduled month'}[MTGMODE];
-  const tword={city:'city-wise',bdm:'BDM-wise',month:'monthly'}[MTGMODE];
-  document.getElementById('mtg_keyhead').textContent=unit;
-  document.getElementById('mtg_title').textContent='Meeting report — '+tword;
-  document.getElementById('mtg_hint').textContent=keys.length+' '+{city:'cities',bdm:'BDMs',month:'months'}[MTGMODE]+' · '+rows.length+' meetings scheduled';
-  const disp=MTGMODE==='month'?(k=>/^\d{4}-\d{2}$/.test(k)?monDisp(k):k):(x=>x);
+  if(mode==='month')keys.sort();else keys.sort((a,b)=>agg[b].sched.n-agg[a].sched.n);
+  const disp=mode==='month'?(k=>/^\d{4}-\d{2}$/.test(k)?monDisp(k):k):(x=>x);
   const sum=(...os)=>os.reduce((t,o)=>({n:t.n+o.n,f:t.f+o.f,u:t.u+o.u,m:t.m.concat(o.m)}),{n:0,f:0,u:0,m:[]});
-  // metric cell: clickable colored box + small Fresh / F-up split
   const mc=(o,cls)=>o.n?`<td><div class="mcell"><span class="box box-${cls} dcell" data-d="${dreg(o.m)}">${o.n}</span><div class="fstack"><span class="fch fresh">Fresh ${o.f}</span><span class="fch fup">F/up ${o.u}</span></div></div></td>`:'<td><span class="z">0</span></td>';
-  const tb=document.querySelector('#mtg_tbl tbody');
-  if(!keys.length){tb.innerHTML='<tr><td colspan=9 class=empty>No meetings match the current filters</td></tr>';return;}
-  tb.innerHTML=keys.map(k=>{const a=agg[k];const comp=sum(a.fu,a.won,a.lost),rc=sum(a.resch,a.canc);
-    return `<tr><td class="keycell">${disp(k)}</td>`+
-      mc(a.sched,'sched')+mc(comp,'green')+mc(a.fu,'green')+mc(a.won,'blue')+mc(a.lost,'grey')+mc(rc,'grey')+mc(a.pending,'red')+mc(a.hoto,'sched')+`</tr>`;
-  }).join('');
-  const T=blank();
-  keys.forEach(k=>['sched','fu','won','lost','resch','canc','pending','hoto'].forEach(b=>{T[b].n+=agg[k][b].n;T[b].f+=agg[k][b].f;T[b].u+=agg[k][b].u;T[b].m=T[b].m.concat(agg[k][b].m);}));
-  const Tcomp=sum(T.fu,T.won,T.lost),Trc=sum(T.resch,T.canc);
-  tb.innerHTML+=`<tr class="totrow"><td class="keycell">TOTAL</td>`+
-    mc(T.sched,'sched')+mc(Tcomp,'green')+mc(T.fu,'green')+mc(T.won,'blue')+mc(T.lost,'grey')+mc(Trc,'grey')+mc(T.pending,'red')+mc(T.hoto,'sched')+`</tr>`;
+  const keyTd=k=>clickableKeys?`<td class="keycell kclick" data-dim="${mode}" data-val="${(''+k).replace(/"/g,'&quot;')}">${disp(k)}</td>`:`<td class="keycell">${disp(k)}</td>`;
+  const cells=a=>{const comp=sum(a.fu,a.won,a.lost),rc=sum(a.resch,a.canc);
+    return mc(a.sched,'sched')+mc(comp,'green')+mc(a.fu,'green')+mc(a.won,'blue')+mc(a.lost,'red')+mc(a.hoto,'sched')+mc(rc,'grey')+mc(a.pending,'red');};
+  let body;
+  if(!keys.length)body='<tr><td colspan=9 class=empty>No meetings match the current filters</td></tr>';
+  else{
+    body=keys.map(k=>`<tr>`+keyTd(k)+cells(agg[k])+`</tr>`).join('');
+    const T=blank();keys.forEach(k=>['sched','fu','won','lost','resch','canc','pending','hoto'].forEach(b=>{T[b].n+=agg[k][b].n;T[b].f+=agg[k][b].f;T[b].u+=agg[k][b].u;T[b].m=T[b].m.concat(agg[k][b].m);}));
+    body+=`<tr class="totrow"><td class="keycell">TOTAL</td>`+cells(T)+`</tr>`;
+  }
+  return {keyHead:{city:'City',bdm:'BDM',month:'Scheduled month'}[mode],body,count:keys.length};
 }
+function renderMeeting(rows){
+  const b=buildMeeting(rows,MTGMODE,true);
+  document.getElementById('mtg_title').textContent='Meeting report — '+{city:'city-wise',bdm:'BDM-wise',month:'monthly'}[MTGMODE];
+  document.getElementById('mtg_hint').textContent=b.count+' '+{city:'cities',bdm:'BDMs',month:'months'}[MTGMODE]+' · '+rows.length+' meetings scheduled · click a row label for its breakdown';
+  document.getElementById('mtg_tbl').innerHTML=meetingThead(b.keyHead)+'<tbody>'+b.body+'</tbody>';
+}
+// click a row label (BDM/Month/City) -> cross-breakdown popup
+let MDRILL=null;
+function openMeetingDrill(dim,val){
+  const others=dim==='bdm'?['month','city']:dim==='month'?['bdm','city']:['bdm','month'];
+  MDRILL={dim,val,others,sub:others[0]};
+  document.getElementById('r_title').textContent=(dim==='month'?monDispSafe(val):val)+' — meeting breakdown';
+  document.getElementById('r_subtabs').innerHTML=others.map((m,i)=>`<button class="rsub ${i===0?'active':''}" data-m="${m}">By ${m==='bdm'?'BDM':m==='city'?'City':'Month'}</button>`).join('');
+  document.querySelectorAll('#r_subtabs .rsub').forEach(btn=>btn.onclick=()=>{document.querySelectorAll('#r_subtabs .rsub').forEach(x=>x.classList.remove('active'));btn.classList.add('active');MDRILL.sub=btn.dataset.m;drawMeetingDrill();});
+  document.getElementById('rmodal').classList.add('show');drawMeetingDrill();
+}
+function drawMeetingDrill(){
+  const {dim,val,sub}=MDRILL;
+  const rows=applyFilters().filter(r=>{
+    if(dim==='bdm')return (r.bdm||'(no BDM)')===val;
+    if(dim==='city')return (r.city||'(no city)')===val;
+    return (/^\d{4}-\d{2}$/.test(r.msM)?r.msM:'(no date)')===val;
+  });
+  const b=buildMeeting(rows,sub,false);
+  document.getElementById('r_sub').textContent=rows.length+' meetings · broken down by '+b.keyHead+' · click any number for projects';
+  document.getElementById('r_body').innerHTML=`<table class="rpt-tbl">${meetingThead(b.keyHead)}<tbody>${b.body}</tbody></table>`;
+}
+document.addEventListener('click',e=>{const c=e.target.closest('.kclick');if(c)openMeetingDrill(c.dataset.dim,c.dataset.val);});
 document.querySelectorAll('.subtab').forEach(b=>b.onclick=()=>{document.querySelectorAll('.subtab').forEach(x=>x.classList.remove('active'));b.classList.add('active');MTGMODE=b.dataset.m;renderMeeting(applyFilters());});
 
 function openModal(p){
