@@ -135,6 +135,8 @@
   .rmodal .rpt-tbl .pct{font-size:13.5px}
   .cellnum{cursor:pointer;transition:transform .1s,box-shadow .1s}
   .cellnum:hover{box-shadow:0 0 0 2px var(--b500) inset;transform:scale(1.04)}
+  .dcell{cursor:pointer;transition:box-shadow .1s}
+  .dcell:hover{box-shadow:0 0 0 2px var(--b500) inset}
   .fmini .fm-bar{cursor:pointer}
   .fmini .fm-bar:hover{filter:brightness(1.1)}
   #pmodal{z-index:90}
@@ -619,6 +621,7 @@ function render(){
   pt.querySelectorAll('.callbtn:not([disabled])').forEach(b=>b.onclick=e=>{e.stopPropagation();openModal(window.PROJ[b.dataset.i]);});
 
   syncFilterUI();renderChip();
+  DRILL=[];
   renderMeeting(rows);
   renderTasks(rows);
   renderCohort(rows);
@@ -630,56 +633,56 @@ let COHORTMODE='bdm';
 function pctCls(p){return p>=20?'hi':p>=8?'mid':'lo';}
 function pctCell(n,d){const p=d?100*n/d:0;return `<td><span class="pct ${pctCls(p)}">${p.toFixed(1)}%</span></td>`;}
 function renderCohort(rows){
-  const agg={};const A=k=>agg[k]||(agg[k]={s:0,c:0,w:0,h:0});
+  const agg={};const A=k=>agg[k]||(agg[k]={s:[],c:[],w:[],h:[]});
   if(COHORTMODE==='month'){
-    rows.forEach(r=>{if(r.msM)A(r.msM).s++;if(r.cmpM)A(r.cmpM).c++;if(r.wonM)A(r.wonM).w++;if(r.hotoM)A(r.hotoM).h++;});
+    rows.forEach(r=>{if(r.msM)A(r.msM).s.push(r);if(r.cmpM)A(r.cmpM).c.push(r);if(r.wonM)A(r.wonM).w.push(r);if(r.hotoM)A(r.hotoM).h.push(r);});
   }else{
     const kf=COHORTMODE==='bdm'?(r=>r.bdm||'(no BDM)'):(r=>r.city||'(no city)');
-    rows.forEach(r=>{const a=A(kf(r));a.s++;if(r.cmpM)a.c++;if(r.wonM)a.w++;if(r.hoto)a.h++;});
+    rows.forEach(r=>{const a=A(kf(r));a.s.push(r);if(r.cmpM)a.c.push(r);if(r.wonM)a.w.push(r);if(r.hoto)a.h.push(r);});
   }
   let keys=Object.keys(agg);
-  if(COHORTMODE==='month')keys.sort();else keys.sort((a,b)=>agg[b].s-agg[a].s);
+  if(COHORTMODE==='month')keys.sort();else keys.sort((a,b)=>agg[b].s.length-agg[a].s.length);
   document.getElementById('coh_keyhead').textContent={month:'Month',bdm:'BDM',city:'City'}[COHORTMODE];
   document.getElementById('coh_title').textContent='Cohort funnel — by '+COHORTMODE;
   const disp=COHORTMODE==='month'?(k=>/^\d{4}-\d{2}$/.test(k)?monDisp(k):k):(x=>x);
-  const box=(n,c)=>n?`<span class="box box-${c}">${n}</span>`:'<span class="z">0</span>';
   const tb=document.querySelector('#cohort_tbl tbody');
   if(!keys.length){tb.innerHTML='<tr><td colspan=9 class=empty>No data</td></tr>';return;}
+  const L=a=>a.length;
   tb.innerHTML=keys.map(k=>{const a=agg[k];
-    return `<tr><td class="keycell">${disp(k)}</td><td>${box(a.s,'sched')}</td><td>${box(a.c,'green')}</td>${pctCell(a.c,a.s)}<td>${box(a.w,'blue')}</td>${pctCell(a.w,a.s)}${pctCell(a.w,a.c)}<td>${box(a.h,'sched')}</td>${pctCell(a.h,a.w)}</tr>`;
+    return `<tr><td class="keycell">${disp(k)}</td><td>${dbox(a.s,L(a.s),'sched')}</td><td>${dbox(a.c,L(a.c),'green')}</td>${pctCell(L(a.c),L(a.s))}<td>${dbox(a.w,L(a.w),'blue')}</td>${pctCell(L(a.w),L(a.s))}${pctCell(L(a.w),L(a.c))}<td>${dbox(a.h,L(a.h),'sched')}</td>${pctCell(L(a.h),L(a.w))}</tr>`;
   }).join('');
-  const T={s:0,c:0,w:0,h:0};keys.forEach(k=>{T.s+=agg[k].s;T.c+=agg[k].c;T.w+=agg[k].w;T.h+=agg[k].h;});
-  tb.innerHTML+=`<tr class="totrow"><td class="keycell">TOTAL</td><td>${box(T.s,'sched')}</td><td>${box(T.c,'green')}</td>${pctCell(T.c,T.s)}<td>${box(T.w,'blue')}</td>${pctCell(T.w,T.s)}${pctCell(T.w,T.c)}<td>${box(T.h,'sched')}</td>${pctCell(T.h,T.w)}</tr>`;
+  const T={s:[],c:[],w:[],h:[]};keys.forEach(k=>{T.s=T.s.concat(agg[k].s);T.c=T.c.concat(agg[k].c);T.w=T.w.concat(agg[k].w);T.h=T.h.concat(agg[k].h);});
+  tb.innerHTML+=`<tr class="totrow"><td class="keycell">TOTAL</td><td>${dbox(T.s,L(T.s),'sched')}</td><td>${dbox(T.c,L(T.c),'green')}</td>${pctCell(L(T.c),L(T.s))}<td>${dbox(T.w,L(T.w),'blue')}</td>${pctCell(L(T.w),L(T.s))}${pctCell(L(T.w),L(T.c))}<td>${dbox(T.h,L(T.h),'sched')}</td>${pctCell(L(T.h),L(T.w))}</tr>`;
 }
 document.querySelectorAll('.csub').forEach(b=>b.onclick=()=>{document.querySelectorAll('.csub').forEach(x=>x.classList.remove('active'));b.classList.add('active');COHORTMODE=b.dataset.c;renderCohort(applyFilters());});
 
 // ---- LEAD JOURNEY (lead cohort followed to outcome) ----
 let JOURNEYMODE='bdm';
 function renderJourney(rows){
-  const leads=byLead(rows);const agg={};const A=k=>agg[k]||(agg[k]={n:0,c:0,w:0,h:0});
+  const leads=byLead(rows);const agg={};const A=k=>agg[k]||(agg[k]={n:[],c:[],w:[],h:[]});
   Object.keys(leads).forEach(id=>{
     const rs=leads[id],r=rep(rs);let k;
     if(JOURNEYMODE==='bdm')k=r.bdm||'(no BDM)';
     else if(JOURNEYMODE==='city')k=r.city||'(no city)';
     else{const ms=rs.map(x=>x.msM).filter(Boolean).sort();k=ms[0]||'(no date)';}
-    const a=A(k);a.n++;
-    if(rs.some(x=>/completed/i.test(x.pstat))||/completed/i.test(r.pstat))a.c++;
-    if(/Sale Done/.test(r.pstat))a.w++;
-    if(rs.some(x=>x.hoto))a.h++;
+    const pr={id,rows:rs,r};const a=A(k);a.n.push(pr);
+    if(rs.some(x=>/completed/i.test(x.pstat))||/completed/i.test(r.pstat))a.c.push(pr);
+    if(/Sale Done/.test(r.pstat))a.w.push(pr);
+    if(rs.some(x=>x.hoto))a.h.push(pr);
   });
   let keys=Object.keys(agg);
-  if(JOURNEYMODE==='month')keys.sort();else keys.sort((a,b)=>agg[b].n-agg[a].n);
+  if(JOURNEYMODE==='month')keys.sort();else keys.sort((a,b)=>agg[b].n.length-agg[a].n.length);
   document.getElementById('jor_keyhead').textContent={month:'Cohort (first meeting month)',bdm:'BDM',city:'City'}[JOURNEYMODE];
   document.getElementById('jor_title').textContent='Lead journey — by '+(JOURNEYMODE==='month'?'scheduled month':JOURNEYMODE);
   const disp=JOURNEYMODE==='month'?(k=>/^\d{4}-\d{2}$/.test(k)?monDisp(k):k):(x=>x);
-  const box=(n,c)=>n?`<span class="box box-${c}">${n}</span>`:'<span class="z">0</span>';
   const tb=document.querySelector('#journey_tbl tbody');
   if(!keys.length){tb.innerHTML='<tr><td colspan=8 class=empty>No data</td></tr>';return;}
+  const L=a=>a.length;
   tb.innerHTML=keys.map(k=>{const a=agg[k];
-    return `<tr><td class="keycell">${disp(k)}</td><td>${box(a.n,'sched')}</td><td>${box(a.c,'green')}</td>${pctCell(a.c,a.n)}<td>${box(a.w,'blue')}</td>${pctCell(a.w,a.n)}<td>${box(a.h,'sched')}</td>${pctCell(a.h,a.w)}</tr>`;
+    return `<tr><td class="keycell">${disp(k)}</td><td>${dbox(a.n,L(a.n),'sched')}</td><td>${dbox(a.c,L(a.c),'green')}</td>${pctCell(L(a.c),L(a.n))}<td>${dbox(a.w,L(a.w),'blue')}</td>${pctCell(L(a.w),L(a.n))}<td>${dbox(a.h,L(a.h),'sched')}</td>${pctCell(L(a.h),L(a.w))}</tr>`;
   }).join('');
-  const T={n:0,c:0,w:0,h:0};keys.forEach(k=>{T.n+=agg[k].n;T.c+=agg[k].c;T.w+=agg[k].w;T.h+=agg[k].h;});
-  tb.innerHTML+=`<tr class="totrow"><td class="keycell">TOTAL</td><td>${box(T.n,'sched')}</td><td>${box(T.c,'green')}</td>${pctCell(T.c,T.n)}<td>${box(T.w,'blue')}</td>${pctCell(T.w,T.n)}<td>${box(T.h,'sched')}</td>${pctCell(T.h,T.w)}</tr>`;
+  const T={n:[],c:[],w:[],h:[]};keys.forEach(k=>{T.n=T.n.concat(agg[k].n);T.c=T.c.concat(agg[k].c);T.w=T.w.concat(agg[k].w);T.h=T.h.concat(agg[k].h);});
+  tb.innerHTML+=`<tr class="totrow"><td class="keycell">TOTAL</td><td>${dbox(T.n,L(T.n),'sched')}</td><td>${dbox(T.c,L(T.c),'green')}</td>${pctCell(L(T.c),L(T.n))}<td>${dbox(T.w,L(T.w),'blue')}</td>${pctCell(L(T.w),L(T.n))}<td>${dbox(T.h,L(T.h),'sched')}</td>${pctCell(L(T.h),L(T.w))}</tr>`;
 }
 document.querySelectorAll('.jsub').forEach(b=>b.onclick=()=>{document.querySelectorAll('.jsub').forEach(x=>x.classList.remove('active'));b.classList.add('active');JOURNEYMODE=b.dataset.j;renderJourney(applyFilters());});
 
@@ -724,8 +727,8 @@ function classifyMtg(s){
 }
 function renderMeeting(rows){
   const keyf=MTGMODE==='city'?(r=>r.city||'(no city)'):MTGMODE==='bdm'?(r=>r.bdm||'(no BDM)'):(r=>r.msM||'(no date)');
-  const blank=()=>({sched:{n:0,f:0,u:0},fu:{n:0,f:0,u:0},won:{n:0,f:0,u:0},lost:{n:0,f:0,u:0},resch:{n:0,f:0,u:0},canc:{n:0,f:0,u:0},pending:{n:0,f:0,u:0},hoto:{n:0,f:0,u:0}});
-  const bump=(o,r)=>{o.n++;if(r.ftype==='Fresh Meeting')o.f++;else if(r.ftype==='Follow-up Meeting')o.u++;};
+  const blank=()=>({sched:{n:0,f:0,u:0,m:[]},fu:{n:0,f:0,u:0,m:[]},won:{n:0,f:0,u:0,m:[]},lost:{n:0,f:0,u:0,m:[]},resch:{n:0,f:0,u:0,m:[]},canc:{n:0,f:0,u:0,m:[]},pending:{n:0,f:0,u:0,m:[]},hoto:{n:0,f:0,u:0,m:[]}});
+  const bump=(o,r)=>{o.n++;o.m.push(r);if(r.ftype==='Fresh Meeting')o.f++;else if(r.ftype==='Follow-up Meeting')o.u++;};
   const agg={};
   rows.forEach(r=>{const k=keyf(r);const a=agg[k]||(agg[k]=blank());bump(a.sched,r);bump(a[classifyMtg(r.fstat)],r);if(r.hoto)bump(a.hoto,r);});
   let keys=Object.keys(agg);
@@ -736,9 +739,9 @@ function renderMeeting(rows){
   document.getElementById('mtg_title').textContent='Meeting report — '+tword;
   document.getElementById('mtg_hint').textContent=keys.length+' '+{city:'cities',bdm:'BDMs',month:'months'}[MTGMODE]+' · '+rows.length+' meetings scheduled';
   const disp=MTGMODE==='month'?(k=>/^\d{4}-\d{2}$/.test(k)?monDisp(k):k):(x=>x);
-  const sum=(...os)=>os.reduce((t,o)=>({n:t.n+o.n,f:t.f+o.f,u:t.u+o.u}),{n:0,f:0,u:0});
-  // metric cell: colored box + small Fresh / F-up split
-  const mc=(o,cls)=>o.n?`<td><div class="mcell"><span class="box box-${cls}">${o.n}</span><div class="fstack"><span class="fch fresh">Fresh ${o.f}</span><span class="fch fup">F/up ${o.u}</span></div></div></td>`:'<td><span class="z">0</span></td>';
+  const sum=(...os)=>os.reduce((t,o)=>({n:t.n+o.n,f:t.f+o.f,u:t.u+o.u,m:t.m.concat(o.m)}),{n:0,f:0,u:0,m:[]});
+  // metric cell: clickable colored box + small Fresh / F-up split
+  const mc=(o,cls)=>o.n?`<td><div class="mcell"><span class="box box-${cls} dcell" data-d="${dreg(o.m)}">${o.n}</span><div class="fstack"><span class="fch fresh">Fresh ${o.f}</span><span class="fch fup">F/up ${o.u}</span></div></div></td>`:'<td><span class="z">0</span></td>';
   const tb=document.querySelector('#mtg_tbl tbody');
   if(!keys.length){tb.innerHTML='<tr><td colspan=9 class=empty>No meetings match the current filters</td></tr>';return;}
   tb.innerHTML=keys.map(k=>{const a=agg[k];const comp=sum(a.fu,a.won,a.lost),rc=sum(a.resch,a.canc);
@@ -746,7 +749,7 @@ function renderMeeting(rows){
       mc(a.sched,'sched')+mc(comp,'green')+mc(a.fu,'green')+mc(a.won,'blue')+mc(a.lost,'grey')+mc(rc,'grey')+mc(a.pending,'red')+mc(a.hoto,'sched')+`</tr>`;
   }).join('');
   const T=blank();
-  keys.forEach(k=>['sched','fu','won','lost','resch','canc','pending','hoto'].forEach(b=>{T[b].n+=agg[k][b].n;T[b].f+=agg[k][b].f;T[b].u+=agg[k][b].u;}));
+  keys.forEach(k=>['sched','fu','won','lost','resch','canc','pending','hoto'].forEach(b=>{T[b].n+=agg[k][b].n;T[b].f+=agg[k][b].f;T[b].u+=agg[k][b].u;T[b].m=T[b].m.concat(agg[k][b].m);}));
   const Tcomp=sum(T.fu,T.won,T.lost),Trc=sum(T.resch,T.canc);
   tb.innerHTML+=`<tr class="totrow"><td class="keycell">TOTAL</td>`+
     mc(T.sched,'sched')+mc(Tcomp,'green')+mc(T.fu,'green')+mc(T.won,'blue')+mc(T.lost,'grey')+mc(Trc,'grey')+mc(T.pending,'red')+mc(T.hoto,'sched')+`</tr>`;
@@ -852,6 +855,7 @@ function drawReport(){
   document.getElementById('r_sub').textContent=Object.keys(agg).length+' '+(RMODE==='month'?'months':RMODE==='bdm'?'BDMs':'cities')+' · click any number for project details · reflects current filters';
 }
 function openProjects(members,title){
+  members=toProjRecs(members);
   document.getElementById('p_title').textContent=title||'Project-wise data';
   document.getElementById('p_sub').textContent=(members?members.length:0)+' projects';
   const list=(members||[]).slice().sort((a,b)=>(b.r.size||0)-(a.r.size||0));
@@ -864,6 +868,17 @@ function openProjects(members,title){
   document.getElementById('pmodal').classList.add('show');
 }
 function closeProjects(){document.getElementById('pmodal').classList.remove('show');}
+// shared drill registry for tab tables (meeting / cohort / journey)
+let DRILL=[];
+function dreg(items){DRILL.push(items||[]);return DRILL.length-1;}
+function dbox(items,n,cls){return n?`<span class="box box-${cls} dcell" data-d="${dreg(items)}">${n}</span>`:'<span class="z">0</span>';}
+function toProjRecs(items){
+  if(!items||!items.length)return [];
+  if(items[0].rows&&items[0].r)return items;            // already projRecs
+  const m={};items.forEach(r=>{(m[r.lead]=m[r.lead]||[]).push(r);}); // raw rows -> group
+  return Object.keys(m).map(id=>({id,rows:m[id],r:rep(m[id])}));
+}
+document.addEventListener('click',e=>{const c=e.target.closest('.dcell');if(c){const i=+c.dataset.d;openProjects(DRILL[i],'Project details');}});
 document.getElementById('r_body').addEventListener('click',e=>{const c=e.target.closest('.cellnum');if(!c)return;const i=+c.dataset.cs;openProjects(CELLSETS[i],(document.getElementById('r_title').textContent||'').replace(' — breakdown',''));});
 function monDispSafe(k){return /^\d{4}-\d{2}$/.test(k)?monDisp(k):k;}
 // wire clicks
