@@ -646,38 +646,46 @@ function render(){
 let COHORTMODE='bdm';
 function pctCls(p){return p>=20?'hi':p>=8?'mid':'lo';}
 function pctCell(n,d){const p=d?100*n/d:0;return `<td><span class="pct ${pctCls(p)}">${p.toFixed(1)}%</span></td>`;}
-function renderCohort(rows){
+function cohortThead(label){return `<thead><tr><th>${label}</th><th>Meetings scheduled</th><th>Meetings completed</th><th>Completed %</th><th>Sale won</th><th>Won % (of scheduled)</th><th>Won % (of completed)</th><th>HOTO</th><th>HOTO % (of won)</th></tr></thead>`;}
+function buildCohort(rows,mode,clickableKeys){
   const agg={};const A=k=>agg[k]||(agg[k]={s:[],c:[],w:[],h:[]});
-  if(COHORTMODE==='month'){
-    rows.forEach(r=>{if(r.msM)A(r.msM).s.push(r);if(r.cmpM)A(r.cmpM).c.push(r);if(r.wonM)A(r.wonM).w.push(r);if(r.hotoM)A(r.hotoM).h.push(r);});
+  if(mode==='month'){
+    rows.forEach(r=>{const ms=/^\d{4}-\d{2}$/.test(r.msM)?r.msM:'(no date)';A(ms).s.push(r);if(r.cmpM)A(r.cmpM).c.push(r);if(r.wonM)A(r.wonM).w.push(r);if(r.hotoM)A(r.hotoM).h.push(r);});
   }else{
-    const kf=COHORTMODE==='bdm'?(r=>r.bdm||'(no BDM)'):(r=>r.city||'(no city)');
+    const kf=mode==='bdm'?(r=>r.bdm||'(no BDM)'):(r=>r.city||'(no city)');
     rows.forEach(r=>{const a=A(kf(r));a.s.push(r);if(r.cmpM)a.c.push(r);if(r.wonM)a.w.push(r);if(r.hoto)a.h.push(r);});
   }
   let keys=Object.keys(agg);
-  if(COHORTMODE==='month')keys.sort();else keys.sort((a,b)=>agg[b].s.length-agg[a].s.length);
-  document.getElementById('coh_keyhead').textContent={month:'Month',bdm:'BDM',city:'City'}[COHORTMODE];
-  document.getElementById('coh_title').textContent='Cohort funnel — by '+COHORTMODE;
-  const disp=COHORTMODE==='month'?(k=>/^\d{4}-\d{2}$/.test(k)?monDisp(k):k):(x=>x);
-  const tb=document.querySelector('#cohort_tbl tbody');
-  if(!keys.length){tb.innerHTML='<tr><td colspan=9 class=empty>No data</td></tr>';return;}
+  if(mode==='month')keys.sort();else keys.sort((a,b)=>agg[b].s.length-agg[a].s.length);
+  const disp=mode==='month'?(k=>/^\d{4}-\d{2}$/.test(k)?monDisp(k):k):(x=>x);
   const L=a=>a.length;
-  tb.innerHTML=keys.map(k=>{const a=agg[k];
-    return `<tr><td class="keycell">${disp(k)}</td><td>${dbox(a.s,L(a.s),'sched')}</td><td>${dbox(a.c,L(a.c),'green')}</td>${pctCell(L(a.c),L(a.s))}<td>${dbox(a.w,L(a.w),'blue')}</td>${pctCell(L(a.w),L(a.s))}${pctCell(L(a.w),L(a.c))}<td>${dbox(a.h,L(a.h),'sched')}</td>${pctCell(L(a.h),L(a.w))}</tr>`;
-  }).join('');
-  const T={s:[],c:[],w:[],h:[]};keys.forEach(k=>{T.s=T.s.concat(agg[k].s);T.c=T.c.concat(agg[k].c);T.w=T.w.concat(agg[k].w);T.h=T.h.concat(agg[k].h);});
-  tb.innerHTML+=`<tr class="totrow"><td class="keycell">TOTAL</td><td>${dbox(T.s,L(T.s),'sched')}</td><td>${dbox(T.c,L(T.c),'green')}</td>${pctCell(L(T.c),L(T.s))}<td>${dbox(T.w,L(T.w),'blue')}</td>${pctCell(L(T.w),L(T.s))}${pctCell(L(T.w),L(T.c))}<td>${dbox(T.h,L(T.h),'sched')}</td>${pctCell(L(T.h),L(T.w))}</tr>`;
+  const keyTd=k=>clickableKeys?`<td class="keycell kclick" data-kind="cohort" data-dim="${mode}" data-val="${(''+k).replace(/"/g,'&quot;')}">${disp(k)}</td>`:`<td class="keycell">${disp(k)}</td>`;
+  const rowH=(label,a)=>`<tr>`+label+`<td>${dbox(a.s,L(a.s),'sched')}</td><td>${dbox(a.c,L(a.c),'green')}</td>${pctCell(L(a.c),L(a.s))}<td>${dbox(a.w,L(a.w),'blue')}</td>${pctCell(L(a.w),L(a.s))}${pctCell(L(a.w),L(a.c))}<td>${dbox(a.h,L(a.h),'sched')}</td>${pctCell(L(a.h),L(a.w))}</tr>`;
+  let body;
+  if(!keys.length)body='<tr><td colspan=9 class=empty>No data</td></tr>';
+  else{
+    body=keys.map(k=>rowH(keyTd(k),agg[k])).join('');
+    const T={s:[],c:[],w:[],h:[]};keys.forEach(k=>{T.s=T.s.concat(agg[k].s);T.c=T.c.concat(agg[k].c);T.w=T.w.concat(agg[k].w);T.h=T.h.concat(agg[k].h);});
+    body+=rowH('<td class="keycell">TOTAL</td>',T).replace('<tr>','<tr class="totrow">');
+  }
+  return {keyHead:{month:'Month',bdm:'BDM',city:'City'}[mode],body};
+}
+function renderCohort(rows){
+  const b=buildCohort(rows,COHORTMODE,true);
+  document.getElementById('coh_title').textContent='Cohort funnel — by '+COHORTMODE;
+  document.getElementById('cohort_tbl').innerHTML=cohortThead(b.keyHead)+'<tbody>'+b.body+'</tbody>';
 }
 document.querySelectorAll('.csub').forEach(b=>b.onclick=()=>{document.querySelectorAll('.csub').forEach(x=>x.classList.remove('active'));b.classList.add('active');COHORTMODE=b.dataset.c;renderCohort(applyFilters());});
 
 // ---- LEAD JOURNEY (lead cohort followed to outcome) ----
 let JOURNEYMODE='bdm';
-function renderJourney(rows){
+function journeyThead(label){return `<thead><tr><th>${label}</th><th>Leads</th><th>Completed</th><th>Completed %</th><th>Sale won</th><th>Won %</th><th>HOTO</th><th>HOTO % (of won)</th></tr></thead>`;}
+function buildJourney(rows,mode,clickableKeys){
   const leads=byLead(rows);const agg={};const A=k=>agg[k]||(agg[k]={n:[],c:[],w:[],h:[]});
   Object.keys(leads).forEach(id=>{
     const rs=leads[id],r=rep(rs);let k;
-    if(JOURNEYMODE==='bdm')k=r.bdm||'(no BDM)';
-    else if(JOURNEYMODE==='city')k=r.city||'(no city)';
+    if(mode==='bdm')k=r.bdm||'(no BDM)';
+    else if(mode==='city')k=r.city||'(no city)';
     else{const ms=rs.map(x=>x.msM).filter(Boolean).sort();k=ms[0]||'(no date)';}
     const pr={id,rows:rs,r};const a=A(k);a.n.push(pr);
     if(rs.some(x=>/completed/i.test(x.pstat))||/completed/i.test(r.pstat))a.c.push(pr);
@@ -685,18 +693,24 @@ function renderJourney(rows){
     if(rs.some(x=>x.hoto))a.h.push(pr);
   });
   let keys=Object.keys(agg);
-  if(JOURNEYMODE==='month')keys.sort();else keys.sort((a,b)=>agg[b].n.length-agg[a].n.length);
-  document.getElementById('jor_keyhead').textContent={month:'Cohort (first meeting month)',bdm:'BDM',city:'City'}[JOURNEYMODE];
-  document.getElementById('jor_title').textContent='Lead journey — by '+(JOURNEYMODE==='month'?'scheduled month':JOURNEYMODE);
-  const disp=JOURNEYMODE==='month'?(k=>/^\d{4}-\d{2}$/.test(k)?monDisp(k):k):(x=>x);
-  const tb=document.querySelector('#journey_tbl tbody');
-  if(!keys.length){tb.innerHTML='<tr><td colspan=8 class=empty>No data</td></tr>';return;}
+  if(mode==='month')keys.sort();else keys.sort((a,b)=>agg[b].n.length-agg[a].n.length);
+  const disp=mode==='month'?(k=>/^\d{4}-\d{2}$/.test(k)?monDisp(k):k):(x=>x);
   const L=a=>a.length;
-  tb.innerHTML=keys.map(k=>{const a=agg[k];
-    return `<tr><td class="keycell">${disp(k)}</td><td>${dbox(a.n,L(a.n),'sched')}</td><td>${dbox(a.c,L(a.c),'green')}</td>${pctCell(L(a.c),L(a.n))}<td>${dbox(a.w,L(a.w),'blue')}</td>${pctCell(L(a.w),L(a.n))}<td>${dbox(a.h,L(a.h),'sched')}</td>${pctCell(L(a.h),L(a.w))}</tr>`;
-  }).join('');
-  const T={n:[],c:[],w:[],h:[]};keys.forEach(k=>{T.n=T.n.concat(agg[k].n);T.c=T.c.concat(agg[k].c);T.w=T.w.concat(agg[k].w);T.h=T.h.concat(agg[k].h);});
-  tb.innerHTML+=`<tr class="totrow"><td class="keycell">TOTAL</td><td>${dbox(T.n,L(T.n),'sched')}</td><td>${dbox(T.c,L(T.c),'green')}</td>${pctCell(L(T.c),L(T.n))}<td>${dbox(T.w,L(T.w),'blue')}</td>${pctCell(L(T.w),L(T.n))}<td>${dbox(T.h,L(T.h),'sched')}</td>${pctCell(L(T.h),L(T.w))}</tr>`;
+  const keyTd=k=>clickableKeys?`<td class="keycell kclick" data-kind="journey" data-dim="${mode}" data-val="${(''+k).replace(/"/g,'&quot;')}">${disp(k)}</td>`:`<td class="keycell">${disp(k)}</td>`;
+  const rowH=(label,a)=>`<tr>`+label+`<td>${dbox(a.n,L(a.n),'sched')}</td><td>${dbox(a.c,L(a.c),'green')}</td>${pctCell(L(a.c),L(a.n))}<td>${dbox(a.w,L(a.w),'blue')}</td>${pctCell(L(a.w),L(a.n))}<td>${dbox(a.h,L(a.h),'sched')}</td>${pctCell(L(a.h),L(a.w))}</tr>`;
+  let body;
+  if(!keys.length)body='<tr><td colspan=8 class=empty>No data</td></tr>';
+  else{
+    body=keys.map(k=>rowH(keyTd(k),agg[k])).join('');
+    const T={n:[],c:[],w:[],h:[]};keys.forEach(k=>{T.n=T.n.concat(agg[k].n);T.c=T.c.concat(agg[k].c);T.w=T.w.concat(agg[k].w);T.h=T.h.concat(agg[k].h);});
+    body+=rowH('<td class="keycell">TOTAL</td>',T).replace('<tr>','<tr class="totrow">');
+  }
+  return {keyHead:{month:'Cohort (first meeting month)',bdm:'BDM',city:'City'}[mode],body};
+}
+function renderJourney(rows){
+  const b=buildJourney(rows,JOURNEYMODE,true);
+  document.getElementById('jor_title').textContent='Lead journey — by '+(JOURNEYMODE==='month'?'scheduled month':JOURNEYMODE);
+  document.getElementById('journey_tbl').innerHTML=journeyThead(b.keyHead)+'<tbody>'+b.body+'</tbody>';
 }
 document.querySelectorAll('.jsub').forEach(b=>b.onclick=()=>{document.querySelectorAll('.jsub').forEach(x=>x.classList.remove('active'));b.classList.add('active');JOURNEYMODE=b.dataset.j;renderJourney(applyFilters());});
 
@@ -759,7 +773,7 @@ function buildMeeting(rows,mode,clickableKeys){
   const disp=mode==='month'?(k=>/^\d{4}-\d{2}$/.test(k)?monDisp(k):k):(x=>x);
   const sum=(...os)=>os.reduce((t,o)=>({n:t.n+o.n,f:t.f+o.f,u:t.u+o.u,m:t.m.concat(o.m)}),{n:0,f:0,u:0,m:[]});
   const mc=(o,cls)=>o.n?`<td><div class="mcell"><span class="box box-${cls} dcell" data-d="${dreg(o.m)}">${o.n}</span><div class="fstack"><span class="fch fresh">Fresh ${o.f}</span><span class="fch fup">F/up ${o.u}</span></div></div></td>`:'<td><span class="z">0</span></td>';
-  const keyTd=k=>clickableKeys?`<td class="keycell kclick" data-dim="${mode}" data-val="${(''+k).replace(/"/g,'&quot;')}">${disp(k)}</td>`:`<td class="keycell">${disp(k)}</td>`;
+  const keyTd=k=>clickableKeys?`<td class="keycell kclick" data-kind="meeting" data-dim="${mode}" data-val="${(''+k).replace(/"/g,'&quot;')}">${disp(k)}</td>`:`<td class="keycell">${disp(k)}</td>`;
   const cells=a=>{const comp=sum(a.fu,a.won,a.lost),rc=sum(a.resch,a.canc);
     return mc(a.sched,'sched')+mc(comp,'green')+mc(a.fu,'green')+mc(a.won,'blue')+mc(a.lost,'red')+mc(a.hoto,'sched')+mc(rc,'grey')+mc(a.pending,'red');};
   let body;
@@ -777,28 +791,34 @@ function renderMeeting(rows){
   document.getElementById('mtg_hint').textContent=b.count+' '+{city:'cities',bdm:'BDMs',month:'months'}[MTGMODE]+' · '+rows.length+' meetings scheduled · click a row label for its breakdown';
   document.getElementById('mtg_tbl').innerHTML=meetingThead(b.keyHead)+'<tbody>'+b.body+'</tbody>';
 }
-// click a row label (BDM/Month/City) -> cross-breakdown popup
-let MDRILL=null;
-function openMeetingDrill(dim,val){
+// click a row label -> cross-breakdown popup (works for meeting / cohort / journey)
+let TDRILL=null;
+function openDrill(kind,dim,val){
   const others=dim==='bdm'?['month','city']:dim==='month'?['bdm','city']:['bdm','month'];
-  MDRILL={dim,val,others,sub:others[0]};
-  document.getElementById('r_title').textContent=(dim==='month'?monDispSafe(val):val)+' — meeting breakdown';
+  TDRILL={kind,dim,val,others,sub:others[0]};
+  const kname={meeting:'meeting',cohort:'cohort funnel',journey:'lead journey'}[kind];
+  document.getElementById('r_title').textContent=(dim==='month'?monDispSafe(val):val)+' — '+kname+' breakdown';
   document.getElementById('r_subtabs').innerHTML=others.map((m,i)=>`<button class="rsub ${i===0?'active':''}" data-m="${m}">By ${m==='bdm'?'BDM':m==='city'?'City':'Month'}</button>`).join('');
-  document.querySelectorAll('#r_subtabs .rsub').forEach(btn=>btn.onclick=()=>{document.querySelectorAll('#r_subtabs .rsub').forEach(x=>x.classList.remove('active'));btn.classList.add('active');MDRILL.sub=btn.dataset.m;drawMeetingDrill();});
-  document.getElementById('rmodal').classList.add('show');drawMeetingDrill();
+  document.querySelectorAll('#r_subtabs .rsub').forEach(btn=>btn.onclick=()=>{document.querySelectorAll('#r_subtabs .rsub').forEach(x=>x.classList.remove('active'));btn.classList.add('active');TDRILL.sub=btn.dataset.m;drawTabDrill();});
+  document.getElementById('rmodal').classList.add('show');drawTabDrill();
 }
-function drawMeetingDrill(){
-  const {dim,val,sub}=MDRILL;
-  const rows=applyFilters().filter(r=>{
-    if(dim==='bdm')return (r.bdm||'(no BDM)')===val;
-    if(dim==='city')return (r.city||'(no city)')===val;
-    return (/^\d{4}-\d{2}$/.test(r.msM)?r.msM:'(no date)')===val;
-  });
-  const b=buildMeeting(rows,sub,false);
-  document.getElementById('r_sub').textContent=rows.length+' meetings · broken down by '+b.keyHead+' · click any number for projects';
-  document.getElementById('r_body').innerHTML=`<table class="rpt-tbl">${meetingThead(b.keyHead)}<tbody>${b.body}</tbody></table>`;
+function drawTabDrill(){
+  const {kind,dim,val,sub}=TDRILL;
+  let rows=applyFilters();
+  if(dim==='bdm')rows=rows.filter(r=>(r.bdm||'(no BDM)')===val);
+  else if(dim==='city')rows=rows.filter(r=>(r.city||'(no city)')===val);
+  else{ // month
+    if(kind==='journey'){const leads=byLead(rows),keep=new Set();Object.keys(leads).forEach(id=>{const ms=leads[id].map(x=>x.msM).filter(Boolean).sort();if((ms[0]||'(no date)')===val)keep.add(id);});rows=rows.filter(r=>keep.has(r.lead));}
+    else rows=rows.filter(r=>(/^\d{4}-\d{2}$/.test(r.msM)?r.msM:'(no date)')===val);
+  }
+  let b,thead;
+  if(kind==='meeting'){b=buildMeeting(rows,sub,false);thead=meetingThead(b.keyHead);}
+  else if(kind==='cohort'){b=buildCohort(rows,sub,false);thead=cohortThead(b.keyHead);}
+  else{b=buildJourney(rows,sub,false);thead=journeyThead(b.keyHead);}
+  document.getElementById('r_sub').textContent='broken down by '+b.keyHead+' · click any number for project details';
+  document.getElementById('r_body').innerHTML=`<table class="rpt-tbl">${thead}<tbody>${b.body}</tbody></table>`;
 }
-document.addEventListener('click',e=>{const c=e.target.closest('.kclick');if(c)openMeetingDrill(c.dataset.dim,c.dataset.val);});
+document.addEventListener('click',e=>{const c=e.target.closest('.kclick');if(c)openDrill(c.dataset.kind,c.dataset.dim,c.dataset.val);});
 document.querySelectorAll('.subtab').forEach(b=>b.onclick=()=>{document.querySelectorAll('.subtab').forEach(x=>x.classList.remove('active'));b.classList.add('active');MTGMODE=b.dataset.m;renderMeeting(applyFilters());});
 
 function openModal(p){
