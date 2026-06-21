@@ -494,7 +494,9 @@ function renderChip(){
 }
 
 function byLead(rows){const m={};rows.forEach(r=>{(m[r.lead]=m[r.lead]||[]).push(r);});return m;}
-function rep(rows){return rows.slice().sort((a,b)=>(a.eff||'').localeCompare(b.eff||''))[rows.length-1];}
+// Project status (latest) = the LAST row's Meeting Final status (BO column).
+// rep returns a copy of the last row with pstat overridden to that final status.
+function rep(rows){const last=rows[rows.length-1];return Object.assign({},last,{pstat:last.fstat});}
 
 let charts={};
 function destroy(){Object.values(charts).forEach(c=>c&&c.destroy());charts={};}
@@ -688,7 +690,7 @@ function buildJourney(rows,mode,clickableKeys){
     else if(mode==='city')k=r.city||'(no city)';
     else{const ms=rs.map(x=>x.msM).filter(Boolean).sort();k=ms[0]||'(no date)';}
     const pr={id,rows:rs,r};const a=A(k);a.n.push(pr);
-    if(rs.some(x=>/completed/i.test(x.pstat))||/completed/i.test(r.pstat))a.c.push(pr);
+    if(rs.some(x=>/completed/i.test(x.fstat))||/completed/i.test(r.pstat))a.c.push(pr);
     if(/Sale Done/.test(r.pstat))a.w.push(pr);
     if(rs.some(x=>x.hoto))a.h.push(pr);
   });
