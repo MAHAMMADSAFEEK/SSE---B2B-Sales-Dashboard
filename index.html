@@ -93,10 +93,12 @@
   .rpt-tbl .pct{font-weight:800;font-variant-numeric:tabular-nums}
   .rpt-tbl .pct.hi{color:#15784e}.rpt-tbl .pct.mid{color:#9a6a06}.rpt-tbl .pct.lo{color:#c0341e}
   .rpt-tbl .schsub{display:flex;gap:5px;justify-content:center;margin-top:5px}
-  .rpt-tbl .fch{font-size:10px;font-weight:700;padding:2px 7px;border-radius:6px;white-space:nowrap}
-  .rpt-tbl .fch.fresh{background:#e4eefc;color:#1554b8}
-  .rpt-tbl .fch.fup{background:#f3eafe;color:#6d49d6}
-  .rpt-tbl tr.totrow .fch{background:rgba(255,255,255,.18);color:#fff}
+  .rpt-tbl .mcell{display:inline-flex;align-items:center;gap:8px;justify-content:center}
+  .rpt-tbl .fstack{display:flex;flex-direction:column;gap:3px}
+  .rpt-tbl .fch{font-size:9.5px;font-weight:700;padding:2px 7px;border-radius:5px;white-space:nowrap;line-height:1.3;text-align:left}
+  .rpt-tbl .fch.fresh{background:#e3f5ea;color:#15784e}
+  .rpt-tbl .fch.fup{background:#fcf3d9;color:#9a6a06}
+  .rpt-tbl tr.totrow .fch{background:rgba(255,255,255,.2);color:#fff}
   .rpt-tbl tr.totrow{background:#0f1a4d}
   .rpt-tbl tr.totrow td{color:#fff;font-weight:800;border-bottom:none}
   .rpt-tbl tr.totrow td.keycell{color:#fff}
@@ -688,7 +690,7 @@ function renderMeeting(rows){
   const disp=MTGMODE==='month'?(k=>/^\d{4}-\d{2}$/.test(k)?monDisp(k):k):(x=>x);
   const sum=(...os)=>os.reduce((t,o)=>({n:t.n+o.n,f:t.f+o.f,u:t.u+o.u}),{n:0,f:0,u:0});
   // metric cell: colored box + small Fresh / F-up split
-  const mc=(o,cls)=>o.n?`<td>${`<span class="box box-${cls}">${o.n}</span>`}<div class="schsub"><span class="fch fresh">Fresh ${o.f}</span><span class="fch fup">F/up ${o.u}</span></div></td>`:'<td><span class="z">0</span></td>';
+  const mc=(o,cls)=>o.n?`<td><div class="mcell"><span class="box box-${cls}">${o.n}</span><div class="fstack"><span class="fch fresh">Fresh ${o.f}</span><span class="fch fup">F/up ${o.u}</span></div></div></td>`:'<td><span class="z">0</span></td>';
   const tb=document.querySelector('#mtg_tbl tbody');
   if(!keys.length){tb.innerHTML='<tr><td colspan=9 class=empty>No meetings match the current filters</td></tr>';return;}
   tb.innerHTML=keys.map(k=>{const a=agg[k];const comp=sum(a.fu,a.won,a.lost),rc=sum(a.resch,a.canc);
