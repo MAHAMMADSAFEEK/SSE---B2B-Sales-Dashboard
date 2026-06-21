@@ -104,18 +104,34 @@
   .rpt-tbl tr.totrow td.keycell{color:#fff}
   .rpt-tbl tr.totrow .box{background:rgba(255,255,255,.16);color:#fff}
 
-  .kpis{display:grid;grid-template-columns:repeat(7,1fr);gap:12px;margin-top:14px}
-  .kpi{background:var(--white);border:1px solid var(--line);border-radius:14px;padding:15px 16px 13px;position:relative;overflow:hidden}
-  .kpi .top{height:4px;border-radius:4px;position:absolute;left:14px;right:14px;top:0}
-  .kpi .label{font-size:10.5px;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);font-weight:700;margin-top:5px}
-  .kpi .val{font-size:27px;font-weight:800;margin-top:7px;line-height:1}
-  .kpi .sub{font-size:11px;color:var(--muted);margin-top:6px}
+  .kpis{display:grid;grid-template-columns:repeat(7,1fr);gap:10px;margin-top:14px}
+  .kpi{background:var(--white);border:1px solid var(--line);border-radius:11px;padding:9px 12px 8px;position:relative;overflow:hidden;cursor:pointer;transition:box-shadow .15s,transform .1s}
+  .kpi:hover{box-shadow:0 6px 16px rgba(21,84,184,.16);transform:translateY(-1px)}
+  .kpi .top{height:3px;border-radius:3px;position:absolute;left:12px;right:12px;top:0}
+  .kpi .label{font-size:9.5px;text-transform:uppercase;letter-spacing:.4px;color:var(--muted);font-weight:700;margin-top:4px}
+  .kpi .val{font-size:20px;font-weight:800;margin-top:3px;line-height:1}
+  .kpi .sub{font-size:10px;color:var(--muted);margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .c-b{color:var(--b600)}.c-g{color:var(--green)}.c-v{color:var(--violet)}.c-a{color:var(--amber)}
   .bg-b{background:var(--b600)}.bg-g{background:var(--green)}.bg-v{background:var(--violet)}.bg-a{background:var(--amber)}.bg-ink{background:var(--b900)}
 
   .row{display:grid;gap:14px;margin-top:14px}
   .r-wide{grid-template-columns:1fr}
   .r-3{grid-template-columns:repeat(3,1fr)}
+  .r-4{grid-template-columns:repeat(4,1fr)}
+  .detbtn{float:right;background:var(--b50);border:1px solid var(--b100);color:var(--b700);font-size:10px;font-weight:700;
+    padding:3px 9px;border-radius:7px;cursor:pointer;text-transform:none;letter-spacing:0}
+  .detbtn:hover{background:var(--b600);color:#fff;border-color:var(--b600)}
+  .rmodal{background:#fff;border-radius:16px;max-width:860px;width:100%;max-height:86vh;overflow:auto;box-shadow:0 24px 60px rgba(16,26,77,.4)}
+  .rsubtabs{display:flex;gap:6px;padding:0 20px 4px}
+  .rsub{background:#e6eefb;color:var(--b700);border:1px solid var(--line);padding:6px 14px;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer}
+  .rsub.active{background:var(--b600);color:#fff;border-color:var(--b600)}
+  .fmini{display:flex;flex-direction:column;gap:3px;margin:8px 0 14px}
+  .fmini .fm-row{display:flex;align-items:center;gap:8px}
+  .fmini .fm-lab{flex:0 0 130px;font-size:12px;font-weight:700;color:var(--b900)}
+  .fmini .fm-track{flex:1;height:22px;background:var(--b50);border-radius:6px;overflow:hidden;display:flex}
+  .fmini .fm-bar{height:100%;display:flex;align-items:center;padding:0 8px;color:#fff;font-size:11px;font-weight:700;border-radius:6px;white-space:nowrap}
+  .funnelcard{border:1px solid var(--line);border-radius:11px;padding:12px 14px;margin-bottom:12px}
+  .funnelcard h5{font-size:13px;color:var(--b900);margin-bottom:6px}
   .r-2{grid-template-columns:1.55fr 1fr}
   .card{background:var(--white);border:1px solid var(--line);border-radius:16px;padding:16px 18px}
   .card h3{font-size:12.5px;font-weight:800;color:var(--b900);text-transform:uppercase;letter-spacing:.7px;display:flex;align-items:center;gap:8px}
@@ -202,18 +218,16 @@
   <!-- OVERVIEW TAB -->
   <div id="tab-overview">
     <div class="kpis" id="kpis"></div>
-    <div class="row r-2">
-      <div class="card">
-        <h3>Sales won &amp; HOTO by month</h3><div class="hint">Last 6 months · click a bar to filter · Won (green) vs HOTO (navy)</div>
-        <div class="chart-box"><canvas id="trend"></canvas></div></div>
-      <div class="card">
-        <h3>Conversion funnel</h3><div class="hint">Unique leads → meeting completed → sale done</div>
-        <div id="funnel" class="funnel"></div></div>
+    <div class="row r-4">
+      <div class="card"><h3>Project status mix<button class="detbtn" data-rep="status">Details ▸</button></h3><div class="hint">Click slice to filter</div><div class="chart-box sm"><canvas id="status"></canvas></div></div>
+      <div class="card"><h3>Lead temperature<button class="detbtn" data-rep="cat">Details ▸</button></h3><div class="hint">Click bar to filter</div><div class="chart-box sm"><canvas id="cat"></canvas></div></div>
+      <div class="card"><h3>Meetings by city<button class="detbtn" data-rep="meetings">Details ▸</button></h3><div class="hint">Click bar to filter</div><div class="chart-box sm"><canvas id="city"></canvas></div></div>
+      <div class="card"><h3>Conversion funnel<button class="detbtn" data-rep="funnel">Details ▸</button></h3><div class="hint">Leads → completed → won → HOTO</div><div id="funnel" class="funnel"></div></div>
     </div>
-    <div class="row r-3">
-      <div class="card"><h3>Project status mix</h3><div class="hint">Click a slice to filter</div><div class="chart-box sm"><canvas id="status"></canvas></div></div>
-      <div class="card"><h3>Lead temperature</h3><div class="hint">Click a bar to filter</div><div class="chart-box sm"><canvas id="cat"></canvas></div></div>
-      <div class="card"><h3>Meetings by city</h3><div class="hint">Click a bar to filter</div><div class="chart-box sm"><canvas id="city"></canvas></div></div>
+    <div class="row r-wide">
+      <div class="card">
+        <h3>Sales won &amp; HOTO by month<button class="detbtn" data-rep="wonhoto">Details ▸</button></h3><div class="hint">Last 6 months · click a bar to filter · Won (green) vs HOTO (navy)</div>
+        <div class="chart-box"><canvas id="trend"></canvas></div></div>
     </div>
     <div class="row r-2">
       <div class="card"><h3>BDM leaderboard</h3><div class="hint">Click a BDM to filter</div>
@@ -324,6 +338,14 @@
 <div class="modal-bg" id="modal" onclick="if(event.target===this)closeModal()">
   <div class="modal"><div class="mh"><div><h4 id="m_title">Call log</h4><p id="m_sub"></p></div><button class="x" onclick="closeModal()">×</button></div>
   <div class="mb" id="m_body"></div></div>
+</div>
+
+<div class="modal-bg" id="rmodal" onclick="if(event.target===this)closeReport()">
+  <div class="rmodal">
+    <div class="mh"><div><h4 id="r_title"></h4><p id="r_sub"></p></div><button class="x" onclick="closeReport()">×</button></div>
+    <div class="rsubtabs" id="r_subtabs"></div>
+    <div class="mb" id="r_body"></div>
+  </div>
 </div>
 
 <script>
@@ -471,11 +493,11 @@ function render(){
   const pipeCap=projRecs.reduce((s,p)=>s+Math.max(0,...p.rows.map(x=>x.size||0)),0);
   const winRate=nLeads?100*won/nLeads:0;
   const fresh=rows.filter(r=>r.ftype==='Fresh Meeting').length,fu=rows.filter(r=>r.ftype==='Follow-up Meeting').length;
-  const K=[['Total leads',fmt(nLeads),'unique projects','c-b','bg-b'],['Meetings held',fmt(nMeet),fresh+' fresh / '+fu+' follow-up','c-b','bg-ink'],
-    ['Sales won',fmt(won),'projects closed','c-g','bg-g'],['HOTO done',fmt(hoto),(won?Math.round(100*hoto/won):0)+'% of won handed over','c-b','bg-ink'],
-    ['Win rate',winRate.toFixed(1)+'%','won ÷ leads','c-v','bg-v'],
-    ['Won capacity',fmt(wonCap)+' KW','on closed deals','c-a','bg-a'],['Pipeline capacity',fmt(pipeCap)+' KW','all leads','c-b','bg-b']];
-  document.getElementById('kpis').innerHTML=K.map(k=>`<div class="kpi"><div class="top ${k[4]}"></div><div class="label">${k[0]}</div><div class="val ${k[3]}">${k[1]}</div><div class="sub">${k[2]}</div></div>`).join('');
+  const K=[['Total leads',fmt(nLeads),'unique projects','c-b','bg-b','leads'],['Meetings held',fmt(nMeet),fresh+' fresh / '+fu+' follow-up','c-b','bg-ink','meetings'],
+    ['Sales won',fmt(won),'projects closed','c-g','bg-g','won'],['HOTO done',fmt(hoto),(won?Math.round(100*hoto/won):0)+'% of won handed over','c-b','bg-ink','hoto'],
+    ['Win rate',winRate.toFixed(1)+'%','won ÷ leads','c-v','bg-v','winrate'],
+    ['Won capacity',fmt(wonCap)+' KW','on closed deals','c-a','bg-a','woncap'],['Pipeline capacity',fmt(pipeCap)+' KW','all leads','c-b','bg-b','pipecap']];
+  document.getElementById('kpis').innerHTML=K.map(k=>`<div class="kpi" data-rep="${k[5]}"><div class="top ${k[4]}"></div><div class="label">${k[0]}</div><div class="val ${k[3]}">${k[1]}</div><div class="sub">${k[2]}</div></div>`).join('');
 
   // conversion funnel
   const completed=projRecs.filter(p=>/completed/i.test(p.r.pstat)).length;
@@ -716,6 +738,92 @@ function openModal(p){
 }
 function closeModal(){document.getElementById('modal').classList.remove('show');}
 document.addEventListener('keydown',e=>{if(e.key==='Escape')closeModal();});
+
+// ===== DETAIL REPORTS (click a card or chart → drill-down popup) =====
+const REPORTS={
+  leads:{title:'Total leads',kind:'count',monthField:'msM',lead:1,val:()=>1},
+  meetings:{title:'Meetings held',kind:'count',monthField:'msM',lead:0},
+  won:{title:'Sales won',kind:'count',monthField:'wonM',lead:1,val:p=>isWon(p.r.pstat)?1:0},
+  hoto:{title:'HOTO done',kind:'count',monthField:'hotoM',lead:1,val:p=>p.rows.some(x=>x.hoto)?1:0},
+  winrate:{title:'Win rate',kind:'winrate',monthField:'msM'},
+  woncap:{title:'Won capacity (KW)',kind:'cap',monthField:'wonM',val:p=>isWon(p.r.pstat)?(p.r.size||0):0},
+  pipecap:{title:'Pipeline capacity (KW)',kind:'cap',monthField:'msM',val:p=>Math.max(0,...p.rows.map(x=>x.size||0))},
+  meetingsChart:{title:'Meetings by group',kind:'count',monthField:'msM',lead:0},
+  wonhoto:{title:'Sales won & HOTO',kind:'wonhoto',monthField:'wonM'},
+  funnel:{title:'Conversion funnel',kind:'funnel'},
+  status:{title:'Project status mix',kind:'matrix',field:'pstat',monthField:'msM'},
+  cat:{title:'Lead temperature',kind:'matrix',field:'cat',monthField:'msM'},
+};
+REPORTS.meetings_ = REPORTS.meetings;
+let RKEY=null,RMODE='city';
+function repKeyFn(mode){return mode==='city'?(p=>p.r.city||'(none)'):mode==='bdm'?(p=>p.r.bdm||'(none)'):null;}
+function repMonth(p,field){if(field==='wonM')return p.r.wonM||(p.rows.map(x=>x.wonM).filter(Boolean)[0])||'';if(field==='hotoM')return p.rows.map(x=>x.hotoM).filter(Boolean).sort()[0]||'';if(field==='msM')return p.rows.map(x=>x.msM).filter(Boolean).sort()[0]||'';return p.r[field]||'';}
+function openReport(key){if(!REPORTS[key])return;RKEY=key;RMODE='city';
+  document.getElementById('r_title').textContent=REPORTS[key].title+' — breakdown';
+  document.getElementById('r_subtabs').innerHTML=[['city','By City'],['month','By Month'],['bdm','By BDM']].map(([m,l],i)=>`<button class="rsub ${i===0?'active':''}" data-m="${m}">${l}</button>`).join('');
+  document.querySelectorAll('#r_subtabs .rsub').forEach(b=>b.onclick=()=>{document.querySelectorAll('#r_subtabs .rsub').forEach(x=>x.classList.remove('active'));b.classList.add('active');RMODE=b.dataset.m;drawReport();});
+  document.getElementById('rmodal').classList.add('show');drawReport();}
+function closeReport(){document.getElementById('rmodal').classList.remove('show');}
+
+function drawReport(){
+  const cfg=REPORTS[RKEY];const rows=applyFilters();const leads=byLead(rows);
+  const projRecs=Object.keys(leads).map(id=>({id,rows:leads[id],r:rep(leads[id])}));
+  const body=document.getElementById('r_body');
+  const monthKey=p=>{const m=repMonth(p,cfg.monthField||'msM');return /^\d{4}-\d{2}$/.test(m)?m:'(no date)';};
+  const keyOf = RMODE==='city'?(p=>p.r.city||'(none)') : RMODE==='bdm'?(p=>p.r.bdm||'(none)') : monthKey;
+  const sortKeys=ks=>RMODE==='month'?ks.sort():ks.sort((a,b)=>agg[b]-agg[a]||(''+a).localeCompare(b));
+  let agg={};
+
+  if(cfg.kind==='count'||cfg.kind==='cap'){
+    if(cfg.kind==='count'&&cfg.lead===0){ // meeting-level
+      const km=RMODE==='city'?(r=>r.city||'(none)'):RMODE==='bdm'?(r=>r.bdm||'(none)'):(r=>/^\d{4}-\d{2}$/.test(r.msM)?r.msM:'(no date)');
+      rows.forEach(r=>{const k=km(r);agg[k]=(agg[k]||0)+1;});
+    } else {
+      projRecs.forEach(p=>{const k=keyOf(p);agg[k]=(agg[k]||0)+(cfg.val?cfg.val(p):1);});
+    }
+    const total=Object.values(agg).reduce((a,b)=>a+b,0);
+    const keys=sortKeys(Object.keys(agg));
+    body.innerHTML=`<table class="rpt-tbl"><thead><tr><th>${RMODE==='month'?'Month':RMODE==='bdm'?'BDM':'City'}</th><th>${cfg.kind==='cap'?'KW':'Count'}</th><th>% of total</th></tr></thead><tbody>`+
+      keys.map(k=>`<tr><td class="keycell">${RMODE==='month'?monDispSafe(k):k}</td><td><span class="box box-sched">${fmt(agg[k])}</span></td><td><span class="pct ${pctCls(total?100*agg[k]/total:0)}">${total?(100*agg[k]/total).toFixed(1):'0'}%</span></td></tr>`).join('')+
+      `<tr class="totrow"><td class="keycell">TOTAL</td><td>${fmt(total)}</td><td>100%</td></tr></tbody></table>`;
+  }
+  else if(cfg.kind==='winrate'){
+    projRecs.forEach(p=>{const k=keyOf(p);(agg[k]=agg[k]||{n:0,w:0});agg[k].n++;if(isWon(p.r.pstat))agg[k].w++;});
+    const keys=RMODE==='month'?Object.keys(agg).sort():Object.keys(agg).sort((a,b)=>agg[b].n-agg[a].n);
+    body.innerHTML=`<table class="rpt-tbl"><thead><tr><th>${RMODE==='month'?'Month':RMODE==='bdm'?'BDM':'City'}</th><th>Leads</th><th>Won</th><th>Win %</th></tr></thead><tbody>`+
+      keys.map(k=>{const a=agg[k];const p=a.n?100*a.w/a.n:0;return `<tr><td class="keycell">${RMODE==='month'?monDispSafe(k):k}</td><td><span class="box box-sched">${a.n}</span></td><td><span class="box box-blue">${a.w}</span></td><td><span class="pct ${pctCls(p)}">${p.toFixed(1)}%</span></td></tr>`;}).join('')+`</tbody></table>`;
+  }
+  else if(cfg.kind==='wonhoto'){
+    projRecs.forEach(p=>{const k=keyOf(p);(agg[k]=agg[k]||{w:0,h:0});if(isWon(p.r.pstat))agg[k].w++;if(p.rows.some(x=>x.hoto))agg[k].h++;});
+    const keys=RMODE==='month'?Object.keys(agg).sort():Object.keys(agg).sort((a,b)=>(agg[b].w+agg[b].h)-(agg[a].w+agg[a].h));
+    body.innerHTML=`<table class="rpt-tbl"><thead><tr><th>${RMODE==='month'?'Month':RMODE==='bdm'?'BDM':'City'}</th><th>Sale won</th><th>HOTO</th><th>HOTO % of won</th></tr></thead><tbody>`+
+      keys.map(k=>{const a=agg[k];const p=a.w?100*a.h/a.w:0;return `<tr><td class="keycell">${RMODE==='month'?monDispSafe(k):k}</td><td><span class="box box-blue">${a.w}</span></td><td><span class="box box-sched">${a.h}</span></td><td><span class="pct ${pctCls(p)}">${p.toFixed(1)}%</span></td></tr>`;}).join('')+`</tbody></table>`;
+  }
+  else if(cfg.kind==='funnel'){
+    // group leads, compute 4-stage funnel per group
+    projRecs.forEach(p=>{const k=keyOf(p);(agg[k]=agg[k]||{n:0,c:0,w:0,h:0});agg[k].n++;if(/completed/i.test(p.r.pstat))agg[k].c++;if(isWon(p.r.pstat))agg[k].w++;if(p.rows.some(x=>x.hoto))agg[k].h++;});
+    const keys=RMODE==='month'?Object.keys(agg).sort():Object.keys(agg).sort((a,b)=>agg[b].n-agg[a].n);
+    body.innerHTML=keys.map(k=>{const a=agg[k];const max=a.n||1;
+      const stage=(lab,n,col)=>`<div class="fm-row"><div class="fm-lab">${lab}</div><div class="fm-track"><div class="fm-bar" style="width:${Math.max(12,100*n/max)}%;background:${col}">${n} · ${(100*n/a.n).toFixed(0)}%</div></div></div>`;
+      return `<div class="funnelcard"><h5>${RMODE==='month'?monDispSafe(k):k}</h5><div class="fmini">`+
+        stage('Leads',a.n,'#2f7bf4')+stage('Completed',a.c,'#1554b8')+stage('Sale won',a.w,'#1f9d6b')+stage('HOTO',a.h,'#101a4d')+`</div></div>`;
+    }).join('')||'<div class="empty">No data</div>';
+  }
+  else if(cfg.kind==='matrix'){
+    const cols=[...new Set(rows.map(r=>r[cfg.field]).filter(Boolean))];
+    const km=RMODE==='city'?(p=>p.r.city||'(none)'):RMODE==='bdm'?(p=>p.r.bdm||'(none)'):monthKey;
+    projRecs.forEach(p=>{const k=km(p);const v=p.r[cfg.field]||'(none)';(agg[k]=agg[k]||{});agg[k][v]=(agg[k][v]||0)+1;});
+    const keys=RMODE==='month'?Object.keys(agg).sort():Object.keys(agg).sort((a,b)=>Object.values(agg[b]).reduce((x,y)=>x+y,0)-Object.values(agg[a]).reduce((x,y)=>x+y,0));
+    body.innerHTML=`<table class="rpt-tbl"><thead><tr><th>${RMODE==='month'?'Month':RMODE==='bdm'?'BDM':'City'}</th>${cols.map(c=>`<th>${c.replace('Meeting ','')}</th>`).join('')}</tr></thead><tbody>`+
+      keys.map(k=>`<tr><td class="keycell">${RMODE==='month'?monDispSafe(k):k}</td>${cols.map(c=>`<td>${agg[k][c]?`<span class="box box-sched">${agg[k][c]}</span>`:'<span class="z">0</span>'}</td>`).join('')}</tr>`).join('')+`</tbody></table>`;
+  }
+  document.getElementById('r_sub').textContent=Object.keys(agg).length+' '+(RMODE==='month'?'months':RMODE==='bdm'?'BDMs':'cities')+' · reflects current filters';
+}
+function monDispSafe(k){return /^\d{4}-\d{2}$/.test(k)?monDisp(k):k;}
+// wire clicks
+document.getElementById('kpis').addEventListener('click',e=>{const c=e.target.closest('.kpi[data-rep]');if(c)openReport(c.dataset.rep);});
+document.addEventListener('click',e=>{const b=e.target.closest('.detbtn');if(b){e.stopPropagation();openReport(b.dataset.rep==='meetings'?'meetingsChart':b.dataset.rep);}});
+document.addEventListener('keydown',e=>{if(e.key==='Escape')closeReport();});
 
 // tabs
 document.querySelectorAll('.tab').forEach(t=>t.onclick=()=>{
